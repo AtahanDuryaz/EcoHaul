@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getBins, getSummary } from './services/api'
 import MapView from './components/MapView'
 
@@ -7,6 +8,7 @@ function App() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     const load = async () => {
@@ -28,10 +30,21 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>EcoHaul - Hafta 1 MVP</h1>
-        <p>
-          Toplam Kutu: {summary?.total_bins ?? '-'} | Offline: {summary?.offline_bins ?? '-'}
-        </p>
+        <div className="header-left">
+          <h1>EcoHaul - Hafta 1 MVP</h1>
+          <p>
+            Toplam Kutu: {summary?.total_bins ?? '-'} | Offline: {summary?.offline_bins ?? '-'}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="anomaly-button"
+          onClick={() => {
+            navigate('/anomalies')
+          }}
+        >
+          Anomali Geçmişini Göster
+        </button>
       </header>
       <section className="map-wrapper">
         {loading && <div className="loading">Harita verileri yükleniyor...</div>}

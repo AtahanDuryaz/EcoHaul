@@ -27,10 +27,10 @@ Hf  Tarihler          Faz           Başlık
 
 MAYIS 2026
 Hf  Tarihler          Faz           Başlık
-─── ─────────────     ──────────    ──────────────────────────────────
+─── ─────────────     ──────────    ───────────────────────────────────────
 7   28 Nis-4 May      Faz 4A        Random Forest Regressor + /predictions
-8   5-11 May          Faz 4B        Co-Pilot + XAI + Animasyon
-9   12-18 May         Faz 5         Dashboard + 30 Gün Simülasyon
+8   5-11 May          Faz 4A/5      Prediction Entegrasyonu + Dashboard Hazırlık (300 kutu)
+9   12-18 May         Faz 5         Dashboard + 30 Gün Simülasyon (300 kutu)
 10  19-20 May         Buffer        E2E Checklist + Demo Provası
 ```
 
@@ -177,7 +177,7 @@ Beklenen çıktı:
 ## Faz 1A — Veritabanı Şeması + Veri Yükleme
 ### Hafta 1 · 17–23 Mart (7 gün)
 
-**Hedef:** 3.425 Dublin bin verisini PostGIS'e yükleyip SQL ile sorgulayabilmek.
+**Hedef:** 300 adet seçili Dublin bin verisini PostGIS'e yükleyip SQL ile sorgulayabilmek.
 
 ---
 
@@ -285,7 +285,7 @@ Beklenen çıktı:
   - Latitude: 53.20° – 53.45°
   - Longitude: -6.45° – -6.05°
 - [ ] Script çalıştır: `python backend/scripts/seed_dublin.py`
-- [ ] `SELECT COUNT(*) FROM bins;` → **3425**
+- [ ] `SELECT COUNT(*) FROM bins;` → **300** (seçili Dublin bin'i)
 - [ ] 5 rastgele bin koordinatını Google Maps'te doğrula
 
 ---
@@ -340,14 +340,14 @@ Beklenen çıktı:
   ```
 - [ ] Test: `SELECT COUNT(*)` ile 500m yarıçap → sonuç mantıklı mı kontrol et
 
-**✅ Faz 1A tamamlandı. 3.425 bin PostGIS'te, `GET /bins` çalışıyor.**
+**✅ Faz 1A tamamlandı. 300 bin PostGIS'te, `GET /bins` çalışıyor.**
 
 ---
 
 ## Faz 1B — React Leaflet Haritası
 ### Hafta 2 devamı · 24–30 Mart
 
-**Hedef:** Dublin haritasında 3.425 bin gerçek zamanlı CircleMarker ile görünüyor.
+**Hedef:** Dublin haritasında 300 bin gerçek zamanlı CircleMarker ile akıcı şekilde görünüyor.
 
 ---
 
@@ -361,7 +361,7 @@ Beklenen çıktı:
     {bins.map(b => <BinMarker key={b.bin_id} bin={b}/>)}
   </MapContainer>
   ```
-- [ ] `preferCanvas={true}` → CircleMarker Canvas renderer (3.425 nokta için kritik, DOM Marker değil)
+- [ ] `preferCanvas={true}` → CircleMarker Canvas renderer (300 nokta için de performanslı, ileride ölçeklenmeye hazır)
 - [ ] `frontend/src/services/api.js` — axios instance:
   ```js
   const api = axios.create({ baseURL: 'http://localhost:8000' });
@@ -400,10 +400,10 @@ Beklenen çıktı:
 
 - [ ] `Header.jsx` — proje adı, canlı saat (`setInterval` 1sn)
 - [ ] Responsive layout: `flex h-screen`
-- [ ] Harita yüklenme süresi tarayıcı DevTools ile ölç → **≤ 2 sn** hedef
-- [ ] 3.425 CircleMarker akıcı render → FPS DevTools'dan kontrol
+- [ ] Harita yüklenme süresi tarayıcı DevTools ile ölç → **≤ 1 sn** (300 kutu için optimize)
+- [ ] 300 CircleMarker akıcı render → FPS DevTools'dan kontrol
 
-**✅ Faz 1 tamamlandı. Haritada 3.425 Dublin bin'i görünüyor, renkler fill_level'a göre.**
+**✅ Faz 1 tamamlandı. Haritada 300 Dublin bin'i görünüyor, renkler fill_level'a göre.**
 
 ---
 
@@ -440,7 +440,7 @@ Tam geçiş matrisi uygulanır (9 durum):
 #### Gün 2–4 · 1–3 Nis · `iot_simulator.py`
 
 - [ ] Async loop, her 10 sn çalışır
-- [ ] `K = total_active_bins × 0.05` — rastgele bin seç
+- [ ] `K = total_active_bins × 0.10` — 300 kutu için her turda ~30 kutu güncelle (daha yoğun ama yönetilebilir yük)
 - [ ] Zaman profili:
   ```python
   FILL_PROBABILITY = {
@@ -523,7 +523,7 @@ async def tick():
 
 - [ ] `POST /heartbeat` endpoint tamamlanıyor
 - [ ] Tick süresi: 30 sn
-- [ ] Write istatistiği: 3.425 aktif bin = **0 write/tick** (tümü True)
+- [ ] Write istatistiği: 300 aktif bin = **0 write/tick** (tümü True)
 
 ---
 
@@ -729,30 +729,24 @@ Frontend: eski polyline sil, yeni çiz
 ## Faz 4A — Random Forest Regressor + Tahmin API'si
 ### Hafta 7 · 28 Nisan – 4 Mayıs
 
-**Hedef:** Geçmiş telemetri verisinden N saat sonra HIGH tahmini.
+**Hedef:** 1 yıllık jenerik (sentetik/geçmiş) veri seti üzerinden N saat sonra HIGH tahmini yapabilen basit ama güvenilir bir model.
 
 ---
 
-#### Gün 1–2 · 28–29 Nis · Eğitim Veri Seti Hazırlama
+#### Gün 1–2 · 28–29 Nis · 1 Yıllık Jenerik Veri Seti Entegrasyonu
 
-- [ ] PostgreSQL'den veri çekimi:
-  ```sql
-  SELECT bin_id, fill_level,
-         EXTRACT(HOUR FROM recorded_at)    AS hour_of_day,
-         EXTRACT(DOW  FROM recorded_at)    AS day_of_week,
-         recorded_at
-  FROM telemetry
-  ORDER BY bin_id, recorded_at;
+- [ ] Daha önce hazırlanmış 1 yıllık jenerik doluluk veri setini (CSV/Parquet) `data/generic_fill_history.*` olarak projeye ekle
+- [ ] Bu veri setini `pandas` ile okuyup aşağıdaki feature'ları üret:
   ```
-- [ ] Feature mühendisliği (`pandas`):
+  hour_of_day           ← 0–23
+  day_of_week          ← 0–6
+  is_weekend           ← day_of_week in [0,6]
+  hours_since_last_empty ← son LOW geçişinden bu yana saat
+  region_encoded       ← LabelEncoder
+  rolling_fill_rate    ← son 3 ölçümde kaç kez artış olmuş (0–3)
   ```
-  is_weekend            ← day_of_week in [0,6]
-  hours_since_last_empty← son fills = 'LOW' geçişinden bu yana saat
-  region_encoded        ← LabelEncoder
-  rolling_fill_rate     ← son 3 ölçümde dolma var mı (0/1/2/3)
-  ```
-- [ ] **Hedef değişken:** `hours_until_high` — o satırdan sonra kaç saat içinde HIGH'a ulaşacak (regresyon)
-- [ ] İlk 2 hafta simülasyon verisiyle eğit, son 3 gün ile test et
+- [ ] **Hedef değişken:** `hours_until_high` — satırdan sonra kaç saat içinde HIGH'a ulaşacağı (regresyon)
+- [ ] Eğitimi bu 1 yıllık veri üzerinde yap, değerlendirmeyi zaman bazlı bir split ile (örneğin son 2 ay test olacak şekilde) kurgula
 
 ---
 
@@ -770,7 +764,7 @@ Frontend: eski polyline sil, yeni çiz
   ])
   model.fit(X_train, y_train)
   ```
-- [ ] Model değerlendirmesi: MAE (Mean Absolute Error) ≤ 2 saat hedef
+- [ ] Model değerlendirmesi: MAE (Mean Absolute Error) **≈ 2–4 saat** aralığında olacak şekilde makul bir doğruluk hedefi belirle (jenerik veri olduğu için aşırı beklenti yok)
 - [ ] `joblib.dump(model, 'models/fill_predictor.pkl')` — persist
 - [ ] Yüklendiğinde tahmin:
   ```python
@@ -782,7 +776,7 @@ Frontend: eski polyline sil, yeni çiz
 
 #### Gün 4–5 · 1–2 May · `GET /predictions` Endpoint
 
-- [ ] Aktif bin'lerin canlı feature'larını çek
+- [ ] Aktif 300 bin'in canlı feature'larını çek (telemetry + bins + generic model input'ları)
 - [ ] Model ile tahmin et
 - [ ] Response:
   ```json
@@ -807,107 +801,17 @@ Frontend: eski polyline sil, yeni çiz
 
 ---
 
-## Faz 4B — Co-Pilot + XAI + Dashboard Animasyonu
-### Hafta 8 · 5–11 Mayıs
-
-**Hedef:** LLM tabanlı sürücü asistanı, XAI açıklamaları, tam animasyonlu dashboard.
-
----
-
-#### Gün 1–2 · 5–6 May · LLM API Seçimi + `copilot.py`
-
-- [ ] OpenAI GPT-4o-mini veya Google Gemini 1.5 Flash (ücretsiz tier)
-  - GPT-4o-mini: $0.15/1M token (ucuz, hızlı)
-  - Gemini 1.5 Flash: ücretsiz, 1M context
-- [ ] `.env`'e `LLM_API_KEY` ve `LLM_PROVIDER` ekle
-- [ ] RAG-lite system prompt:
-  ```
-  Sen EcoHaul AI çöp toplama sisteminin sürücü asistanısın.
-  Gerçek zamanlı veriler: {aktif_bin}, {high_count}, {m_current} kg yük,
-  Rota: {next_3_stops}, Saat: {time}
-  Sürücü: {soru}
-  ```
-- [ ] Intent tespiti: regex + LLM birlikte (regex hızlı, LLM fallback)
-
----
-
-#### Gün 2–4 · 6–8 May · 5 Intent Uygulaması
-
-| Intent | Test Cümleleri |
-|---|---|
-| `EXPLAIN_ROUTE` | "Neden bu yola gidiyoruz?", "Bu rotayı neden seçtik?" |
-| `ROAD_BLOCKED` | "O'Connell kapalı", "Şu yol kapalı", "Bu sokaktan geçemeyiz" |
-| `STATUS_QUERY` | "Kaç dolu bin var?", "Bugünkü durum nedir?" |
-| `KPI_QUERY` | "Kaç yakıt harcadık?", "Bugünkü tasarruf ne kadar?" |
-| `FACILITY_QUERY` | "En yakın boşaltma istasyonu nerede?" |
-
-- [ ] `ROAD_BLOCKED` → `await reroute(avoid_coords)` → yeni rota frontend'e push
-- [ ] `EXPLAIN_ROUTE` → `xai_explainer.py` çağrısı
-
----
-
-#### Gün 3–5 · 7–9 May · `xai_explainer.py` — F=m×a Açıklaması
-
-- [ ] Her rota kararı için açıklama formatı:
-  ```
-  "Ballybough'a önce gidiyoruz çünkü:
-   1. 2 HIGH bin — acil toplama gerekiyor.
-   2. Araç boş (0 kg) → F=m×a ile uzağa gitme maliyeti düşük.
-   3. Bölge yüksekte → boşken gitmek doluyken gitmekten %23 daha verimli."
-  ```
-- [ ] Sayısal kanıt: gerçek `m_current`, `d_ij`, `α` değerleri açıklamaya dahil edilir
-- [ ] Testler:
-  - `test_copilot_intent_explain` → EXPLAIN_ROUTE intent
-  - `test_copilot_road_blocked` → ROAD_BLOCKED + reroute
-  - `test_xai_formula_reference` → "F=m×a" açıklamada geçiyor
-
----
-
-#### Gün 4–6 · 8–10 May · `CoPilotChat.jsx` + Zustand State
-
-- [ ] Chat arayüzü: mesaj input, gönder buttonu, scrollable mesaj listesi
-- [ ] Formül vurgusu: "F=m×a" → `<span class="font-bold text-blue-600">` 
-- [ ] Sayı vurgusu: "%23", "2.3 saat" → sarı highlight
-- [ ] Zustand global state entegrasyonu:
-  ```js
-  {
-    bins, selectedBin, activeLayers,
-    kpi, truck, simulation, avoidPolygons
-  }
-  ```
-- [ ] Co-Pilot mesajına yanıt yeni rota içeriyorsa harita otomatik güncelleniyor
-
----
-
-#### Gün 6–7 · 10–11 May · Integration Test Paketi
-
-- [ ] `tests/test_integration.py` — I1–I9:
-  - `test_hybrid_db_sync` — bins tablosu tutarlı
-  - `test_update_fill_e2e` — POST → telemetry + bins güncelleme
-  - `test_anomaly_creates_event` — HIGH → event_log kaydı
-  - `test_suspicious_emptying_e2e` — kamyonsuz → SUSPICIOUS
-  - `test_get_bins_with_filter` — filtreli sorgu
-  - `test_routes_compare_response` — KPI aritmetik doğru
-  - `test_offline_integration` — 3 loop miss → offline
-  - `test_truck_telemetry_flow` — simülatör GPS pingleri
-  - `test_ors_routing_integration` — geçerli GeoJSON LineString
-- [ ] `pytest tests/test_integration.py -v` → 9/9 yeşil
-
-**✅ Faz 4 tamamlandı. Co-Pilot çalışıyor, XAI açıklamaları üretiyor.**
-
----
-
-## Faz 5 — Dashboard + 30 Gün Demo Simülasyonu
+## Faz 5 — Dashboard + 30 Gün Demo Simülasyonu (300 Kutu)
 ### Hafta 9 · 12–18 Mayıs
 
-**Hedef:** Tam KPI paneli, 30 gün hızlandırılmış simülasyon, sistem testleri.
+**Hedef:** 300 kutuluk sistem için tam KPI paneli, 30 gün hızlandırılmış simülasyon ve temel sistem testleri.
 
 ---
 
 #### Gün 1–2 · 12–13 May · `KPIBar.jsx` + `RouteComparePanel.jsx`
 
 - [ ] KPI Bar (üst):
-  - Toplam Aktif Bin (yeşil badge)
+  - Toplam Aktif Bin (300 kutu içinde online olanlar, yeşil badge)
   - HIGH Seviye Bin (kırmızı badge)
   - Bugün Toplanan Atık (kg)
   - EcoHaul vs Greedy Yakıt Tasarrufu (%)
@@ -994,7 +898,7 @@ Simülasyon parametreleri:
 |---|---|---|
 | E1 | Sistem başlatma | `uvicorn` + `npm dev` → tüm servisler ayakta |
 | E2 | Harita yüklenme | ≤ 2 sn |
-| E3 | 3.425 bin görünüyor | Yeşil CircleMarker |
+| E3 | 300 bin görünüyor | Yeşil CircleMarker |
 | E4 | Popup çalışıyor | bin_id, region, fill_level |
 | E5 | Simülasyon başlat | Bin'ler dolmaya başlıyor |
 | E6 | İlk HIGH bin | Kırmızı flash + alert |
@@ -1007,9 +911,9 @@ Simülasyon parametreleri:
 | E13 | Seviye atlama | FILL_SKIP_ANOMALY |
 | E14 | Şüpheli döküm | SUSPICIOUS_EMPTYING |
 | E15 | Yol kapatma | Yeni rota + kırmızı polygon |
-| E16 | Co-Pilot: "Neden?" | F=m×a referanslı Türkçe açıklama |
-| E17 | Co-Pilot: "Kaç dolu?" | Gerçek anlık sayı |
-| E18 | Tahmin overlay | Dolacak bin'ler turuncu |
+| E16 | Tahmin API'si | `GET /predictions` 200, mantıklı çıktı |
+| E17 | Prediction overlay | Dolacak bin'ler turuncu |
+| E18 | Rota + tahmin entegrasyonu | Tahmin edilen HIGH bin'ler rota planına eklenmiş |
 | E19 | 30 gün simülasyon | KPI özet doğru |
 | E20 | Genel akıcılık | Hata/crash yok |
 
@@ -1049,8 +953,7 @@ E2E Demo Checklist   E1–E20   → 20 adet  ← 19 Mayıs'a kadar
 |---|---|---|---|
 | ORS API rate limit (2K req/gün) | Orta | Yüksek | Route cache; 30 gün sim için pre-computed geometry JSON |
 | ESP32 WiFi güvenilirliği (demo) | Yüksek | Orta | Demo'da yazılım simülatörü esas; ESP32 bonus gösterim |
-| ML model az veri (Faz 4A) | Düşük | Orta | 2 hafta simülasyon verisi yeterli; synthetic augmentation |
-| LLM API maliyet/limit | Düşük | Düşük | GPT-4o-mini veya Gemini Flash ücretsiz tier |
+| ML model domain farkı (jenerik veri) | Orta | Orta | 1 yıllık generic veri setini Dublin dağılımına benzer seç; model çıktısını dashboard'da "yardımcı sinyal" olarak sun |
 | Faz kayması (birinin gecikmesi) | Orta | Yüksek | Her fazın son günü buffer; Faz 5 frontend'i Faz 3'te başlayabilir |
 | PostGIS koordinat hatası | Düşük | Yüksek | `always_xy=True` zorunlu; Faz 1'de test U1 ile erken yakalanır |
 
@@ -1072,3 +975,178 @@ E2E Demo Checklist   E1–E20   → 20 adet  ← 19 Mayıs'a kadar
 ---
 
 *Yol haritası proje boyunca güncel tutulacaktır. Her faz tamamlandığında ilgili satırlardaki kutucuklar işaretlenir.*
+
+---
+
+## Kişisel Sprint Planı — 22 Mart 2026 → 22 Mayıs 2026
+
+**Amaç:** 25–31 Mart arasında en az bir ESP32 modülünden backend'e veri akışını sağlamak ve kalan sürede mevcut faz planına paralel ilerlemek.
+
+Bu kişisel plan, yukarıdaki Faz 1–5 yapısını bozmadan senin gerçek zamanlı çalışma takvimine uyarlanmış bir sprint görünümü sağlar.
+
+### Haftalık Özet
+
+```
+Hafta  Tarihler        Odak                          İlgili Faz
+─────  ─────────────   ───────────────────────────   ─────────────
+W1     22–28 Mar       Backend sağlamlaştırma +      Faz 1A/1B
+                      ESP32 donanım hazırlığı
+W2     29 Mar–4 Nis    ESP32 → Backend veri akışı    Faz 1B → 2B (erken)
+W3     5–11 Nis        Heartbeat + temel anomali     Faz 2A/2B
+W4     12–18 Nis       IoT simülatörü + harita enteği Faz 2A/2B
+W5     19–25 Nis       Optimizasyon motoru (çekirdek) Faz 3A
+W6     26 Nis–2 May    ORS + kamyon simülatörü       Faz 3B
+W7     3–9 May         RF tahmin modeli + /predictions Faz 4A
+W8     10–16 May       Dashboard + KPI polisajı (300 kutu) Faz 5
+W9     17–22 May       30g sim + demo + teslim haz.  Faz 5 + Buffer
+```
+
+---
+
+### Hafta W1 · 22–28 Mart — DB/API Sağlamlaştırma + ESP32 Donanım
+
+**Hedef:** 29 Mart'a girmeden backend/API tamamen stabil olsun ve ESP32 donanımı masada ölçüm yapabilir hale gelsin.
+
+- [ ] 22–23 Mar · DB + API son kontrolleri
+  - [ ] `backend/scripts/*.py` ile cleaning/transform/validate pipeline'ını uçtan uca tekrar çalıştır
+  - [ ] `backend/scripts/load_bins_to_db.py` ile PostGIS'e yüklemeyi doğrula (`COUNT(*)` ve bbox)
+  - [ ] `uvicorn app.main:app --reload` ile `/api/bins` ve `/api/bins/summary` endpointlerini tarayıcıdan ve Postman'den test et
+- [ ] 24–25 Mar · ESP32 + sensör donanım kurulumu
+  - [ ] ESP32 board + JSN-SR04T devre bağlantısını [dosyalar/ESP32_IOT_KATMANI.md](dosyalar/ESP32_IOT_KATMANI.md) şemasına göre yap
+  - [ ] Level shifter / gerilim bölücü ile ECHO pinini 3.3V seviyesine indir, multimetre ile ölç
+  - [ ] 5–6 farklı mesafede (30/50/70 cm) seri monitörden değer okuyup T-H1 doğruluk testini geç
+- [ ] 26–28 Mar · Firmware iskeleti
+  - [ ] `ecohaul_sensor.ino` içindeki WiFi ve basit mesafe ölçümünü derleyip ESP32'ye yükle
+  - [ ] Seri monitörde her boot'ta mesafe ve fill_level (`LOW/MEDIUM/HIGH`) çıktığını gör
+  - [ ] WiFi SSID/IP ayarlarını backend çalışacak makinenle aynı LAN'da olacak şekilde netleştir
+
+> Bu haftanın sonunda: **ESP32 donanım olarak hazır**, mesafe ölçüyor ve seri monitörde stabil veri gösteriyor olmalı.
+
+---
+
+### Hafta W2 · 29 Mart – 4 Nisan — ESP32 → Backend Veri Akışı (Kritik)
+
+**Kritik hedef (29–31 Mart):** En az bir ESP32 modülü `/update-fill` ve `/heartbeat` endpointlerine veri gönderecek, PostgreSQL'de `telemetry` ve `bins.is_active` güncellemeleri görülecek.
+
+- [ ] 29–31 Mar · HTTP entegrasyonu
+  - [ ] Backend tarafında minimal `/update-fill` ve `/heartbeat` endpointlerini hazırla (gerekirse önce basit loglama ile başla)
+  - [ ] Firmware'de `sendFillUpdate` ve `sendHeartbeat` fonksiyonlarını çalışır hale getir (ESP32_IOT_KATMANI.md §7)
+  - [ ] Postman/HTTPie ile elle `POST /update-fill` ve `POST /heartbeat` deneyip backend'in doğru cevap verdiğinden emin ol
+  - [ ] ESP32'den gelen gerçek istekleri FastAPI loglarında gör; `telemetry` tablosunda satır oluştuğunu SQL ile doğrula
+- [ ] 1–2 Nis · Harita ile ilk canlı entegrasyon
+  - [ ] `/api/bins` response'unu ESP32'nin güncellediği `fill_level` ve `is_active` alanlarıyla besle
+  - [ ] Frontend map üzerinde ilgili bin'in rengi ESP32 hareketine göre değişiyor mu test et (LOW→MEDIUM→HIGH)
+- [ ] 3–4 Nis · Hata yönetimi
+  - [ ] WiFi kopması durumunda firmware'in exponential backoff ile davrandığını seri monitörden gözlemle
+  - [ ] Backend'te bilinmeyen `bin_id` ve invalid `fill_level` için 404/422 cevaplarını netleştir
+
+> Bu haftanın sonunda: **"ESP32 veri alıyor" hedefi gerçekleşmiş olmalı** — fiziksel hareket → harita rengi değişimi zinciri uçtan uca çalışıyor.
+
+---
+
+### Hafta W3 · 5–11 Nisan — Heartbeat + Temel Anomali Motoru
+
+**Hedef:** 3-loop miss counter heartbeat mekanizması ve en az 3 anomali senaryosunun uçtan uca çalışması.
+
+- [ ] 5–7 Nis · Heartbeat manager
+  - [ ] `heartbeat_manager.py` içinde 30 sn tick + 3-loop miss mantığını implemente et
+  - [ ] ESP32'nin 60 sn sleep süresi ile backend `T_tick=30 sn` senkronizasyonunu test et
+  - [ ] `BIN_OFFLINE` ve `BIN_ONLINE` eventlerinin `event_log` tablosunda oluştuğunu SQL ile doğrula
+- [ ] 8–9 Nis · Temel anomaly_engine
+  - [ ] LOW→MEDIUM (event yok), MEDIUM→HIGH (`OVERFLOW_RISK`), LOW→HIGH (`FILL_SKIP_ANOMALY`) senaryolarını kodla
+  - [ ] Simülatör veya ESP32 üzerinden bu üç geçişi tetikleyip dashboard'da gözlemle
+- [ ] 10–11 Nis · Küçük test paketi
+  - [ ] `tests/test_phase2.py`'den en kritik 4–5 testi önce yaz, sonra çalıştır (özellikle seviye atlama ve overflow)
+
+---
+
+### Hafta W4 · 12–18 Nisan — IoT Simülatörü + Harita Entegrasyonu
+
+**Hedef:** Tüm bin'ler için yazılımsal simülatör çalışsın, ESP32 ise seçili birkaç bin için gerçek veri versin.
+
+- [ ] 12–14 Nis · `iot_simulator.py`
+  - [ ] Zaman profilli dolma olasılıkları (gece/sabah/gündüz/akşam) için loop'u yaz
+  - [ ] Seçilmiş K adet bin için her 10 sn doluluk/heartbeat üret
+- [ ] 15–16 Nis · Hibrit mod
+  - [ ] Simülatörün güncellediği bin'ler ile ESP32'nin güncellediği bin'leri SQL'de ayırt edip sorgu yaz (kaynak alanı vs.)
+  - [ ] Harita üzerinde ESP32 bin'lerini farklı ikon/renkle işaretlemeyi düşün (opsiyonel)
+- [ ] 17–18 Nis · Stabilite turu
+  - [ ] Backend/Frontend/Simülatör/ESP32 aynı anda çalışırken 30–60 dk gözlem yap; CPU/RAM, DB büyümesi ve logları incele
+
+---
+
+### Hafta W5 · 19–25 Nisan — Optimizasyon Motoru (Çekirdek)
+
+**Hedef:** Mass-aware ve greedy algoritmaların temel halleri çalışsın, henüz ORS entegrasyonu zorunlu değil.
+
+- [ ] 19–21 Nis · Cost fonksiyonu ve rota veri modeli
+  - [ ] `optimization_engine.py` için `C_ij = (m_base + m_current) × d_ij × α_ij` formülünü kodla
+  - [ ] Basit sentetik bir bin setiyle (10–20 bin) route çıktısını debug et
+- [ ] 22–23 Nis · Greedy baseline
+  - [ ] Sadece mesafeye göre en yakın HIGH bin'i seçen greedy algoritmayı yaz
+  - [ ] İki algoritmanın aynı interface'i kullandığından emin ol
+- [ ] 24–25 Nis · İlk KPI karşılaştırmaları
+  - [ ] Yakıt/mesafe/CO₂ metriklerini hesaplayan küçük bir yardımcı modül yaz
+  - [ ] Küçük bir senaryoda EcoHaul'un greedy'den daha iyi çıktığını sayısal olarak göster
+
+---
+
+### Hafta W6 · 26 Nisan – 2 Mayıs — ORS + Kamyon Simülatörü
+
+**Hedef:** ORS public API ile gerçek yol geometrisi ve frontend'de hareket eden bir kamyon prototipi.
+
+- [ ] 26–28 Nis · ORS entegrasyonu
+  - [ ] `routing_service.py` ile `driving-hgv` endpoint'ini çağırıp GeoJSON polyline al
+  - [ ] Basit bir rota için polyline'ı haritada göster
+- [ ] 29–30 Nis · Kamyon hareketi
+  - [ ] Shapely veya Leaflet MovingMarker ile rota üzerinde hareket eden marker'ı göster
+  - [ ] Kamyon bin'e yaklaştığında `collection_event` kaydını DB'ye işle
+- [ ] 1–2 May · Mini entegrasyon testi
+  - [ ] Bir günlük simülasyon senaryosunda rota, telemetry, event_log ve collection_events tutarlı mı kontrol et
+
+---
+
+### Hafta W7 · 3–9 Mayıs — Random Forest + /predictions
+
+**Hedef:** 1 yıllık jenerik veri setiyle eğitilmiş RF modeli + çalışan `/predictions` endpoint'i.
+
+- [ ] 3–5 May · Feature engineering
+  - [ ] `hours_since_last_empty`, `rolling_fill_rate`, `is_weekend` vb. feature'ları hazırlayan script yaz
+  - [ ] Eğitim/test split'ini belirleyip ilk modeli eğit
+- [ ] 6–7 May · Model entegrasyonu
+  - [ ] RF modelini diske kaydedip backend içinde yükle
+  - [ ] `GET /predictions` ile canlı tahmin response'u dön
+- [ ] 8–9 May · Dashboard overlay
+  - [ ] 0–2 saat içinde dolacak kutuları turuncu halka ile işaretleyen katmanı ekle
+
+---
+
+### Hafta W8 · 10–16 Mayıs — Dashboard + KPI Polisajı (300 Kutu)
+
+**Hedef:** 300 kutuluk sistem için dashboard'un demo seviyesine getirilmesi; KPI bar, prediction overlay ve katman toggle'larının son halini almak.
+
+- [ ] 10–12 May · Dashboard performans ve UX
+  - [ ] 300 kutu ile harita yüklenme süresi ve FPS değerlerini ölç, gerekiyorsa cluster/virtualization ayarlarını incele
+  - [ ] KPI bar ve RouteCompare panelini 300 kutuya göre son haliyle yerleştir
+- [ ] 13–14 May · Prediction overlay ve rota entegrasyonu
+  - [ ] Prediction overlay'in görsel durumunu (turuncu halkalar) son kez gözden geçir
+  - [ ] Tahmin edilen HIGH kutuların rota planlamasına nasıl dahil olduğunu UI üzerinden netleştir
+- [ ] 15–16 May · Layout ve görsel polish
+  - [ ] Event log, katman toggle'ları ve temel animasyonları toparla (gereksiz karmaşıklığı azalt)
+
+---
+
+### Hafta W9 · 17–22 Mayıs — 30 Gün Simülasyon + Demo/Teslim Hazırlığı
+
+**Hedef:** 30 günlük hızlandırılmış simülasyon, demo provası ve teslim evraklarının tamamlanması.
+
+- [ ] 17–18 May · 30 gün simülasyon koşuları
+  - [ ] Simülatörü 30 günlük hızlandırılmış modda en az bir kez çalıştır ve KPI sonuçlarını kaydet
+  - [ ] Sistem/performance testlerini (GET /bins latency, concurrent POST vb.) bir kez toplu çalıştır
+- [ ] 19–20 May · E2E demo provası
+  - [ ] ECOHAUL_TEST_VE_DEMO.md'deki demo akışını baştan sona prova et (15–20 dk)
+  - [ ] OBS ile yedek ekran kaydı al
+- [ ] 21–22 May · Rapor ve teslim
+  - [ ] Yazılı rapor, slayt ve teknik dokümanları (özellikle ESP32_IOT_KATMANI ve ROADMAP) gözden geçir
+  - [ ] GitHub son temizlik, README güncelleme ve teslim için gerekli PDF/zip paketini hazırla
+

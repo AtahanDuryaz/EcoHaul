@@ -6,5 +6,6 @@ const api = axios.create({
 
 export const getBins = () => api.get('/api/bins')
 export const getSummary = () => api.get('/api/bins/summary')
+export const getAnomalies = () => api.get('/api/anomalies')
 
 export default api

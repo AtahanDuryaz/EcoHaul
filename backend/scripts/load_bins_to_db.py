@@ -38,6 +38,18 @@ def main() -> None:
         init_sql = INIT_SQL_FILE.read_text(encoding="utf-8")
         connection.execute(text(init_sql))
 
+        # Initialize new IoT-related columns with sensible defaults for imported data
+        for record in records:
+            # Ensure last_emptied_at is either a proper timestamp or NULL, not NaN/double
+            if "last_emptied_at" in record and pd.isna(record["last_emptied_at"]):
+                record["last_emptied_at"] = None
+
+            record.setdefault("fill_level", None)
+            record.setdefault("is_active", True)
+            record.setdefault("last_seen_at", None)
+            record.setdefault("last_enum_transition", None)
+            record.setdefault("last_enum_change_at", None)
+
         upsert_query = text(
             """
             INSERT INTO bins (
@@ -47,6 +59,11 @@ def main() -> None:
                 status,
                 region,
                 last_emptied_at,
+                fill_level,
+                is_active,
+                last_seen_at,
+                last_enum_transition,
+                last_enum_change_at,
                 geom
             ) VALUES (
                 :bin_id,
@@ -55,6 +72,11 @@ def main() -> None:
                 :status,
                 :region,
                 :last_emptied_at,
+                :fill_level,
+                :is_active,
+                :last_seen_at,
+                :last_enum_transition,
+                :last_enum_change_at,
                 ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
             )
             ON CONFLICT (bin_id) DO UPDATE SET
@@ -63,6 +85,11 @@ def main() -> None:
                 status = EXCLUDED.status,
                 region = EXCLUDED.region,
                 last_emptied_at = EXCLUDED.last_emptied_at,
+                fill_level = EXCLUDED.fill_level,
+                is_active = EXCLUDED.is_active,
+                last_seen_at = EXCLUDED.last_seen_at,
+                last_enum_transition = EXCLUDED.last_enum_transition,
+                last_enum_change_at = EXCLUDED.last_enum_change_at,
                 geom = EXCLUDED.geom
             """
         )
