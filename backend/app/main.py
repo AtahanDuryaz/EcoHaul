@@ -1,13 +1,41 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
-from .database import get_db
+from .database import SessionLocal, get_db
+from .routers import simulation
 from .schemas import AnomalyEventOut, BinOut, BinsSummaryOut, HeartbeatIn, StateChangeIn
 from .services.anomaly_service import fetch_recent_anomalies
 from .services.bins_service import fetch_bins, fetch_summary, log_heartbeat, log_state_change
+from .simulation_engine import engine
 
-app = FastAPI(title="EcoHaul Week 1 API")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Uygulama başlarken bin'leri engine'e yükle
+    db = SessionLocal()
+    try:
+        rows = db.execute(text("""
+            SELECT bin_id, latitude AS lat, longitude AS lon,
+                   region, fill_label, distance_label
+            FROM bins
+            ORDER BY bin_id
+        """)).mappings().all()
+        engine.load_bins([dict(r) for r in rows])
+    except Exception as exc:
+        print(f"[engine] Bin yüklenemedi: {exc}")
+    finally:
+        db.close()
+    yield
+    # Uygulama kapanırken simülasyonu durdur
+    await engine.stop()
+
+
+app = FastAPI(title="EcoHaul API", lifespan=lifespan)
+app.include_router(simulation.router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,8 +63,6 @@ def get_bins_summary(db: Session = Depends(get_db)) -> dict:
 
 @app.get("/api/anomalies", response_model=list[AnomalyEventOut])
 def get_anomalies(limit: int = 50, db: Session = Depends(get_db)) -> list[AnomalyEventOut]:
-    """Return recent anomaly events for inspection in the UI."""
-
     return fetch_recent_anomalies(db, limit=limit)
 
 
@@ -48,9 +74,8 @@ def post_state_change(
 ) -> dict:
     try:
         log_state_change(db, bin_id, payload)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
     return {"status": "ok"}
 
 
@@ -62,7 +87,6 @@ def post_heartbeat(
 ) -> dict:
     try:
         log_heartbeat(db, bin_id, payload)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
     return {"status": "ok"}

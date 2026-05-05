@@ -119,6 +119,13 @@ function App() {
           </button>
           <button
             type="button"
+            className="sim-nav-button"
+            onClick={() => navigate('/simulation')}
+          >
+            Simülasyon
+          </button>
+          <button
+            type="button"
             className="anomaly-button"
             onClick={() => navigate('/anomalies')}
           >
