@@ -45,7 +45,7 @@ DEPOT_LAT, DEPOT_LON = 53.3498, -6.2603
 CO2_PER_KM  = 0.28   # kg / km  (diesel waste truck)
 FUEL_PER_KM = 0.35   # L  / km
 AVG_SPEED   = 30.0   # km / h   (urban average)
-SERVICE_MIN = 5      # minutes spent at each stop
+SERVICE_MIN = 3      # minutes spent at each stop
 
 # These three bins will stay OFFLINE throughout the simulation
 # (reserved for real sensor attachments)

@@ -8,8 +8,13 @@ PATCH /api/simulation/speed         → hız ayarla {multiplier: int}
 GET  /api/simulation/live-state     → anlık bin + kamyon durumu
 GET  /api/simulation/live-kpis      → anlık KPI özeti
 GET  /api/simulation/anomalies      → son 50 simülasyon anomalisi
+GET  /api/simulation/export-csv     → fill history CSV indir
 """
+import csv
+import io
+
 from fastapi import APIRouter, Body
+from fastapi.responses import StreamingResponse
 
 from ..simulation_engine import SPEED_OPTIONS, engine
 
@@ -60,3 +65,24 @@ def get_live_kpis():
 @router.get("/anomalies")
 def get_anomalies():
     return list(reversed(engine.recent_anomalies))
+
+
+@router.get("/export-csv")
+def export_fill_history():
+    history = engine.fill_history
+    if not history:
+        return {"message": "Henüz kayıt yok. Simülasyonu çalıştırın."}
+
+    fieldnames = ["sim_time", "world", "bin_id", "event",
+                  "fill_pct", "fill_label", "distance_label", "fill_rate"]
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(history)
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=fill_history.csv"},
+    )
