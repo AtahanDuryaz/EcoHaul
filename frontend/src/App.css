@@ -29,6 +29,13 @@ body {
   gap: 16px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .header-left h1 {
   margin: 0;
   font-size: 18px;
@@ -69,8 +76,207 @@ body {
   outline-offset: 2px;
 }
 
+.toggle-button,
+.route-button,
+.test-button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #2563eb;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.route-button {
+  border-color: #b45309;
+  background: linear-gradient(135deg, #f59e0b, #b45309);
+  box-shadow: 0 2px 4px rgba(180, 83, 9, 0.25);
+}
+
+.test-button {
+  border-color: #06b6d4;
+  background: linear-gradient(135deg, #22d3ee, #0e7490);
+  box-shadow: 0 2px 4px rgba(14, 116, 144, 0.25);
+}
+
+.toggle-button:hover,
+.route-button:hover,
+.test-button:hover {
+  transform: translateY(-1px);
+}
+
+.toggle-button:disabled,
+.route-button:disabled,
+.test-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .map-wrapper {
   height: calc(100vh - 74px);
+  position: relative;
+}
+
+.traffic-legend-panel {
+  position: absolute;
+  top: 110px;
+  right: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  z-index: 600;
+  min-width: 210px;
+}
+
+.traffic-legend-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.traffic-legend-updated {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.traffic-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.traffic-legend-items.route {
+  margin-top: 8px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 6px;
+}
+
+.legend-dot.low {
+  background: #39ff14;
+}
+
+.legend-dot.medium {
+  background: #ffe600;
+}
+
+.legend-dot.high {
+  background: #ff1e1e;
+}
+
+.legend-dot.severe {
+  background: #ff003c;
+}
+
+.legend-dot.route-free {
+  background: #00b7ff;
+}
+
+.legend-dot.route-moderate {
+  background: #b45309;
+}
+
+.legend-dot.route-heavy {
+  background: #000000;
+}
+
+.status-message {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
+  z-index: 650;
+}
+
+.eta-panel {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  z-index: 600;
+  min-width: 220px;
+}
+
+.eta-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.eta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.anomaly-toast-stack {
+  position: absolute;
+  top: 110px;
+  left: 20px;
+  display: grid;
+  gap: 10px;
+  z-index: 650;
+}
+
+.anomaly-toast {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 12px;
+  min-width: 220px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.35);
+}
+
+.anomaly-toast-error {
+  background: #b91c1c;
+}
+
+.anomaly-toast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.anomaly-toast-type {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.anomaly-toast-dismiss {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.anomaly-toast-body {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: #e2e8f0;
 }
 
 .loading,
@@ -215,4 +421,672 @@ body {
   padding: 16px;
   color: #64748b;
   font-size: 14px;
+}
+
+/* ===== Simulation nav button (main header) ===== */
+.sim-nav-button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #7c3aed;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.25);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.sim-nav-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(124, 58, 237, 0.35);
+}
+
+/* ===================================================================
+   Operations Center (Simulation) Page  —  dark monitoring theme
+   =================================================================== */
+
+/* ── Page shell ── */
+.opc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #070d1a;
+  color: #e2e8f0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+
+/* ── Header ── */
+.opc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #0c1527;
+  border-bottom: 1px solid #1a2744;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.opc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.opc-header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+}
+
+.opc-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #334155;
+  flex-shrink: 0;
+  transition: background 0.4s, box-shadow 0.4s;
+}
+
+.opc-live-dot.opc-dot-on {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: opc-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes opc-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+.opc-live-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  padding: 2px 9px;
+  border-radius: 4px;
+}
+
+.opc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Header buttons ── */
+.opc-btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.opc-btn-traffic {
+  background: transparent;
+  border-color: #334155;
+  color: #64748b;
+}
+
+.opc-btn-traffic.on {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.opc-btn-traffic:hover { border-color: #475569; color: #94a3b8; }
+
+.opc-btn-run {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.opc-btn-run:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.opc-btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.opc-btn-back {
+  background: transparent;
+  border-color: #1e2d42;
+  color: #475569;
+}
+
+.opc-btn-back:hover { border-color: #334155; color: #64748b; }
+
+/* ── Error bar ── */
+.opc-error {
+  padding: 6px 20px;
+  background: rgba(185, 28, 28, 0.25);
+  border-bottom: 1px solid rgba(185, 28, 28, 0.5);
+  color: #fca5a5;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* ── Savings strip ── */
+.opc-savings-strip {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 6px 20px;
+  background: rgba(34, 197, 94, 0.05);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.18);
+  flex-shrink: 0;
+}
+
+.opc-savings-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #22c55e;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.opc-savings-items {
+  display: flex;
+  gap: 20px;
+}
+
+.opc-savings-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.opc-savings-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4ade80;
+  line-height: 1;
+}
+
+.opc-savings-sub {
+  font-size: 10px;
+  color: #4b6a4b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Loading ── */
+.opc-init-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #334155;
+  font-size: 14px;
+}
+
+/* ── Body (two columns) ── */
+.opc-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.opc-divider {
+  width: 2px;
+  background: linear-gradient(to bottom, #111d30, #1e3a5f 40%, #111d30);
+  flex-shrink: 0;
+}
+
+/* ── Column ── */
+.opc-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Column header */
+.opc-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  background: #0b1624;
+  flex-shrink: 0;
+}
+
+.opc-head-algo { border-bottom: 2px solid rgba(34, 197, 94, 0.4); }
+.opc-head-fixed { border-bottom: 2px solid rgba(245, 158, 11, 0.4); }
+
+.opc-col-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.opc-badge-algo {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.opc-badge-fixed {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.opc-computing {
+  font-size: 11px;
+  color: #475569;
+  animation: opc-blink 0.9s step-end infinite;
+}
+
+@keyframes opc-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+/* ── KPI chips row ── */
+.opc-chips-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #09111e;
+  border-bottom: 1px solid #0e1a2e;
+  flex-shrink: 0;
+}
+
+.opc-chip {
+  flex: 1;
+  min-width: 0;
+  background: #111e33;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid;
+}
+
+.opc-chip-algo  { border-color: rgba(34, 197, 94, 0.18); }
+.opc-chip-fixed { border-color: rgba(245, 158, 11, 0.18); }
+
+.opc-chip-val {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.opc-val-algo  { color: #22c55e; }
+.opc-val-fixed { color: #f59e0b; }
+
+.opc-chip-unit {
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.opc-chip-label {
+  font-size: 10px;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: auto;
+}
+
+/* Efficiency chip variant */
+.opc-chip-eff { justify-content: space-between; }
+
+.opc-eff-top { display: flex; align-items: baseline; gap: 4px; }
+
+.opc-eff-track {
+  height: 5px;
+  background: #1a2744;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 2px 0;
+}
+
+.opc-eff-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.9s ease;
+}
+
+.opc-eff-algo  { background: #22c55e; }
+.opc-eff-fixed { background: #f59e0b; }
+
+/* ── Truck status bar ── */
+.opc-truck-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: #09111e;
+  border-bottom: 1px solid #0e1a2e;
+  flex-shrink: 0;
+}
+
+.opc-truck-dots { display: flex; gap: 5px; align-items: center; }
+
+.opc-truck-dot {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+}
+
+.opc-dot-algo {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.opc-dot-fixed {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.opc-truck-label  { font-size: 12px; color: #475569; }
+.opc-truck-loading { font-size: 12px; color: #1e3a5f; letter-spacing: 0.2em; }
+.opc-truck-empty  { font-size: 13px; color: #1e293b; }
+
+/* ── Map area ── */
+.opc-map-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Bottom-center pill overlay */
+.opc-map-pill {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.opc-pill-algo {
+  background: rgba(7, 13, 26, 0.88);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.opc-pill-fixed {
+  background: rgba(7, 13, 26, 0.88);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.opc-pill-dot { opacity: 0.4; }
+
+/* Traffic active label */
+.opc-traffic-label {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 600;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: rgba(7, 13, 26, 0.85);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  padding: 3px 9px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* ── Timeline bar (bottom of simulation page) ── */
+.opc-timeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  background: #0c1527;
+  border-top: 1px solid #1a2744;
+  flex-shrink: 0;
+}
+
+.opc-tl-btn {
+  background: #1e3a5f;
+  border: 1px solid #2a4a7f;
+  color: #e2e8f0;
+  border-radius: 6px;
+  width: 32px;
+  height: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.opc-tl-btn:hover { background: #274d80; }
+
+.opc-tl-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.opc-tl-time {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  min-width: 44px;
+}
+
+.opc-tl-slider {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1e3a5f;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.opc-tl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #1d4ed8;
+  cursor: pointer;
+}
+
+.opc-tl-end {
+  font-size: 11px;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* Speed buttons */
+.opc-speed-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.opc-speed-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #1e3a5f;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.opc-speed-btn.active {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+.opc-speed-btn:hover { border-color: #3b82f6; color: #93c5fd; }
+
+/* ── Simülasyon kontrol barı ── */
+.opc-sim-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 16px;
+  background: #0c1527;
+  border-bottom: 1px solid #1a2744;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.opc-ctrl-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.opc-ctrl-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid #2a4a7f;
+  background: #1a2e4a;
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.opc-ctrl-btn.active {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #22c55e;
+}
+
+.opc-ctrl-btn:hover { border-color: #3b82f6; color: #bfdbfe; }
+
+.opc-ctrl-reset {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+.opc-ctrl-reset:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.opc-ctrl-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.opc-clock-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #334155;
+}
+
+.opc-clock-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7dd3fc;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Anomali log barı (sayfa altı) ── */
+.opc-anomaly-log {
+  background: #0b1120;
+  border-top: 1px solid #1a2744;
+  padding: 6px 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  min-height: 38px;
+}
+
+.opc-anomaly-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #475569;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.opc-anomaly-empty {
+  font-size: 12px;
+  color: #1e3a5f;
+}
+
+.opc-anomaly-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: #111d33;
+  border-radius: 5px;
+  border: 1px solid #1a2744;
+  flex-shrink: 0;
+}
+
+.opc-anomaly-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.opc-anomaly-bin {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.opc-anomaly-type {
+  font-size: 10px;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.opc-anomaly-time {
+  font-size: 10px;
+  color: #334155;
+  white-space: nowrap;
 }
