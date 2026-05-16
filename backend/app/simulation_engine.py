@@ -8,7 +8,7 @@ Canlı simülasyon motoru.
 Depot : en kuzey bin + 0.005° offset (parlak mor işaret)
 TSP   : Nearest-Neighbor + 2-opt (sabit rotalar startup'ta bir kez hesaplanır)
 
-Filo         : Her dünya için MAX_FLEET_SIZE = 10 kamyon
+Filo         : Her dünya için MAX_FLEET_SIZE = 12 kamyon
 Kapasite     : Hacimsel model — %100 bin kamyonun %5'ini doldurur (BIN_VOLUME_FRACTION)
 Rota genişletme: Acil bin (%90+) önce mevcut kamyona eklenir, kapasite/sapma uygunsa
 Dolum        : Phase 1 environment — saatlik profil × event × gürültü
@@ -46,8 +46,8 @@ FILL_RATE_RANGES: dict[str, tuple[float, float]] = {
     "B": (4.0,  8.0),   # orta : 12–25 sim saatte dolar → orta aciliyet
     "C": (0.5,  1.5),   # yavaş: 67–200 sim saatte dolar → fixed rota boşa sefer yapar
 }
-FULL_THRESHOLD     = 60.0
-CRITICAL_THRESHOLD = 90.0
+FULL_THRESHOLD     = 50.0
+CRITICAL_THRESHOLD = 85.0
 
 DISPATCH_COST_TL = 2_000
 FUEL_PRICE_TL    = 45
@@ -60,12 +60,12 @@ ANOMALY_MAX_INTERVAL_S   = 1_200   # max 20 sim dakika
 ALGO_MAX_STOPS      = 40   # kapasite kırpması gerçek yük sınırını uygular
 FIXED_ROUTE_SIZE    = 20
 FIXED_DISPATCH_HOUR = 6            # her gün 06:00
-MAX_FLEET_SIZE      = 10           # her dünya için maksimum aktif kamyon
+MAX_FLEET_SIZE      = 12          # her dünya için maksimum aktif kamyon
 MAX_FILL_HISTORY    = 10_000       # bellekte tutulacak maksimum fill event sayısı
 
 EXTENSION_FILL_THRESHOLD    = 90.0  # % doluluk — mevcut kamyona ekleme eşiği
 MAX_DETOUR_RATIO            = 0.30  # eklemenin kalan rotaya oranı ≤ %30
-OPPORTUNISTIC_FILL_THRESHOLD = 60.0  # % doluluk — fırsatçı toplama eşiği (aynı zone)
+OPPORTUNISTIC_FILL_THRESHOLD = 55.0  # % doluluk — fırsatçı toplama eşiği (aynı zone)
 FALLBACK_EMERGENCY_FILL      = 90.0  # fallback scatter sadece bu eşiğin üstü için
 
 # Tier-1: Acil zone
@@ -74,12 +74,15 @@ URGENT_ZONE_MIN_BINS = 4     # minimum 4 bin
 
 # Tier-2: Coverage rotation — ETF-bazlı adaptif interval (baz: 20 sim saat)
 COVERAGE_INTERVAL_S  = 20 * 3_600  # baz interval; adaptif hesap için kullanılır
-COVERAGE_MIN_FILL    = 30.0         # coverage turunda ≥30% dolu bin topla
+COVERAGE_MIN_FILL    = 50.0         # coverage turunda ≥50% dolu bin topla — yük/km'yi korur
 
 # Koridor tabanlı fırsatçı toplama
-CORRIDOR_RADIUS_KM        = 0.5    # rota bacağına 500m yakınındaki bin → aday
+CORRIDOR_RADIUS_KM        = 0.65   # rota bacağına 650m yakınındaki bin → aday
 CORRIDOR_MIN_FILL         = 70.0   # koridor adayı için minimum doluluk
-MAX_CORRIDOR_DETOUR_RATIO = 0.20   # koridor eklentisi için gevşek sapma oranı
+MAX_CORRIDOR_DETOUR_RATIO = 0.25   # koridor eklentisi için gevşek sapma oranı
+
+# Coverage rotation — maksimum aralık tavanı
+COVERAGE_MAX_INTERVAL_S   = 36 * 3_600  # 36 sim saat üzeri beklemeye izin verme
 
 # Tier-0: Priority Aging — bekleyen bin'ler için ekstra kamyon
 AGING_THRESHOLD_S    = 4 * 3_600   # 4 sim saat %100'de kaldıysa "yaşlı"
@@ -107,6 +110,7 @@ class BinState:
     is_anomaly: bool     = False
     anomaly_end_sim_s: float = 0.0
     overflow_start_s: float  = -1.0  # ilk %100 geçiş sim_s; -1 = henüz taşmadı
+    last_emptied_sim_s: float = -1.0  # son boşaltım sim_s; -1 = henüz boşaltılmadı
 
     def refresh_status(self) -> None:
         if self.is_anomaly:
@@ -118,11 +122,12 @@ class BinState:
         else:
             self.status = "EMPTY"
 
-    def empty(self) -> None:
-        self.fill_pct        = 0.0
-        self.is_anomaly      = False
-        self.overflow_start_s = -1.0
-        self.status          = "EMPTY"
+    def empty(self, sim_s: float = -1.0) -> None:
+        self.last_emptied_sim_s = sim_s
+        self.fill_pct           = 0.0
+        self.is_anomaly         = False
+        self.overflow_start_s   = -1.0
+        self.status             = "EMPTY"
 
 
 @dataclass
@@ -172,6 +177,35 @@ def _nearest_neighbor(bins: list[BinState], from_lat: float, from_lon: float) ->
         remaining.remove(closest)
         cur_lat, cur_lon = closest.lat, closest.lon
     return result
+
+
+def _two_opt_route(stops: list[Stop], depot_lat: float, depot_lon: float) -> list[Stop]:
+    """Standart 2-opt iyileştirmesi. Startup'ta bir kez çalışır (O(n²), n≤20)."""
+    if len(stops) < 4:
+        return stops
+
+    def _total_dist(r: list[Stop]) -> float:
+        d = _haversine_km(depot_lat, depot_lon, r[0].lat, r[0].lon)
+        for i in range(len(r) - 1):
+            d += _haversine_km(r[i].lat, r[i].lon, r[i + 1].lat, r[i + 1].lon)
+        d += _haversine_km(r[-1].lat, r[-1].lon, depot_lat, depot_lon)
+        return d
+
+    best = list(stops)
+    improved = True
+    while improved:
+        improved = False
+        bd = _total_dist(best)
+        for i in range(len(best) - 1):
+            for j in range(i + 2, len(best)):
+                cand = best[:i + 1] + best[i + 1:j + 1][::-1] + best[j + 1:]
+                cd = _total_dist(cand)
+                if cd < bd - 1e-6:
+                    best, bd, improved = cand, cd, True
+                    break
+            if improved:
+                break
+    return best
 
 
 def _weighted_fuel(stops: list[Stop], depot_lat: float, depot_lon: float) -> tuple[float, float]:
@@ -305,18 +339,36 @@ def _dist_to_segment_km(
     return math.sqrt(dx * dx + dy * dy)
 
 
-def _bin_to_dict(b: BinState) -> dict:
+def _bin_to_dict(b: BinState, sim_s: float, sim_epoch: datetime) -> dict:
+    # Tahmini dolum vakti (virtual datetime)
+    if b.fill_pct >= 100.0 or b.is_anomaly:
+        estimated_full_iso = None
+    elif b.fill_rate > 0:
+        etf_h = (100.0 - b.fill_pct) / b.fill_rate
+        current_vt = sim_epoch + timedelta(seconds=sim_s)
+        estimated_full_iso = (current_vt + timedelta(hours=etf_h)).isoformat()
+    else:
+        estimated_full_iso = None  # dolmuyor
+
+    # Son boşaltım vakti
+    if b.last_emptied_sim_s >= 0:
+        last_emptied_iso = (sim_epoch + timedelta(seconds=b.last_emptied_sim_s)).isoformat()
+    else:
+        last_emptied_iso = None
+
     return {
-        "bin_id":         b.bin_id,
-        "lat":            b.lat,
-        "lon":            b.lon,
-        "region":         b.region,
-        "fill_pct":       round(b.fill_pct, 1),
-        "status":         b.status,
-        "fill_label":     b.fill_label,
-        "fill_rate":      b.fill_rate,
-        "distance_label": b.distance_label,
-        "district_type":  b.district_type.value,   # Phase 1
+        "bin_id":             b.bin_id,
+        "lat":                b.lat,
+        "lon":                b.lon,
+        "region":             b.region,
+        "fill_pct":           round(b.fill_pct, 1),
+        "status":             b.status,
+        "fill_label":         b.fill_label,
+        "fill_rate":          b.fill_rate,
+        "distance_label":     b.distance_label,
+        "district_type":      b.district_type.value,
+        "estimated_full_iso": estimated_full_iso,
+        "last_emptied_iso":   last_emptied_iso,
     }
 
 
@@ -387,7 +439,7 @@ class SimulationEngine:
         return {
             "distance_km": 0.0, "fuel_l": 0.0, "co2_kg": 0.0,
             "cost_tl": 0.0, "dispatch_count": 0, "overflow_events": 0,
-            "bins_collected": 0, "load_collected": 0.0,
+            "overflow_count": 0, "bins_collected": 0, "load_collected": 0.0,
         }
 
     @staticmethod
@@ -452,8 +504,9 @@ class SimulationEngine:
         self._fixed_routes.clear()
         for i in range(0, len(all_bins), FIXED_ROUTE_SIZE):
             chunk     = all_bins[i:i + FIXED_ROUTE_SIZE]
-            optimized = _nearest_neighbor(chunk, self.depot_lat, self.depot_lon)
-            self._fixed_routes.append([Stop(b.bin_id, b.lat, b.lon) for b in optimized])
+            nn_order  = _nearest_neighbor(chunk, self.depot_lat, self.depot_lon)
+            stops     = [Stop(b.bin_id, b.lat, b.lon) for b in nn_order]
+            self._fixed_routes.append(_two_opt_route(stops, self.depot_lat, self.depot_lon))
 
     # ── Kontrol ────────────────────────────────────────────────────────────
 
@@ -539,6 +592,7 @@ class SimulationEngine:
                 if b.fill_pct >= 100.0:
                     kpis["overflow_events"] += 1
                     if old_pct < 100.0:
+                        kpis["overflow_count"] += 1   # yeni taşma olayı (%100'e ilk geçiş)
                         self._append_history("OVERFLOW", b, world_name)
                     # İlk kez %100'e ulaştığında zamanı kaydet (aging için)
                     if world_name == "algo" and b.overflow_start_s < 0:
@@ -647,7 +701,7 @@ class SimulationEngine:
                         if b.fill_pct >= EXTENSION_FILL_THRESHOLD and not b.is_anomaly]
         extended_ids = self._try_extend_truck(urgent) if urgent and self.algo_trucks else set()
 
-        # Koridor fırsatçı toplama: rota bacaklarına 500m yakın ≥70% bin'ler
+        # Koridor fırsatçı toplama: rota bacaklarına yakın bin'ler — her zaman aktif
         if self.algo_trucks:
             corridor = self._corridor_bins(available, claimed | extended_ids)
             if corridor:
@@ -881,7 +935,7 @@ class SimulationEngine:
                     kpis = self.algo_kpis if world_name == "algo" else self.fixed_kpis
                     kpis["bins_collected"]  += 1
                     kpis["load_collected"]  += b.fill_pct   # toplanan gerçek yük (%cinsinden)
-                    b.empty()
+                    b.empty(self._sim_s)
             else:
                 seg = max(1.0, t.leg_end_sim_s - t.leg_start_sim_s)
                 t.progress = max(0.0, min(1.0, (s - t.leg_start_sim_s) / seg))
@@ -1044,8 +1098,8 @@ class SimulationEngine:
             "speed_multiplier": self.speed_multiplier,
             "depot_lat":        self.depot_lat,
             "depot_lon":        self.depot_lon,
-            "algo_bins":        [_bin_to_dict(b) for b in self.algo_bins.values()],
-            "fixed_bins":       [_bin_to_dict(b) for b in self.fixed_bins.values()],
+            "algo_bins":        [_bin_to_dict(b, self._sim_s, self._sim_epoch) for b in self.algo_bins.values()],
+            "fixed_bins":       [_bin_to_dict(b, self._sim_s, self._sim_epoch) for b in self.fixed_bins.values()],
             "algo_trucks":      [_truck_to_dict(t, self.depot_lat, self.depot_lon) for t in self.algo_trucks],
             "fixed_trucks":     [_truck_to_dict(t, self.depot_lat, self.depot_lon) for t in self.fixed_trucks],
             # Phase 1 — frontend'de aktif eventleri göster
@@ -1072,7 +1126,7 @@ class SimulationEngine:
                 "co2_kg":        round(f["co2_kg"]    - a["co2_kg"],    1),
                 "fuel_l":        round(f["fuel_l"]    - a["fuel_l"],    1),
                 "cost_tl":       round(f["cost_tl"]   - a["cost_tl"],   1),
-                "overflow_diff": f["overflow_events"] - a["overflow_events"],
+                "overflow_diff": f["overflow_count"] - a["overflow_count"],
             },
         }
 

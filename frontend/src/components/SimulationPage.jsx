@@ -4,6 +4,7 @@ import L from 'leaflet'
 import {
   MapContainer,
   Marker,
+  Polyline,
   Popup,
   TileLayer,
 } from 'react-leaflet'
@@ -74,6 +75,18 @@ function makeBinIcon(status, fillPct) {
   })
 }
 
+const DEPOT_ICON = L.divIcon({
+  className: '',
+  html: `<div style="
+    width:20px;height:20px;border-radius:50%;
+    background:#c026d3;
+    border:3px solid #e879f9;
+    box-shadow:0 0 14px #c026d3, 0 0 28px rgba(192,38,211,0.5);
+  "></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+})
+
 function makeTruckIcon(routeType, status) {
   const color  = routeType === 'algo' ? '#22c55e' : '#f59e0b'
   const border = routeType === 'algo' ? '#166534' : '#92400e'
@@ -95,7 +108,9 @@ function TrafficLayer({ url, token }) {
 
 // ── SimMap ────────────────────────────────────────────────────────────────────
 
-function SimMap({ bins, trucks, showTraffic, trafficToken }) {
+function SimMap({ bins, trucks, showTraffic, trafficToken, depotLat, depotLon, accent }) {
+  const accentColor = accent === 'algo' ? '#22c55e' : '#f59e0b'
+
   return (
     <MapContainer center={DUBLIN_CENTER} zoom={12} style={{ height: '100%', width: '100%' }}>
       <TileLayer
@@ -106,6 +121,29 @@ function SimMap({ bins, trucks, showTraffic, trafficToken }) {
         <TrafficLayer url={TRAFFIC_URL} token={trafficToken} />
       )}
 
+      {/* Tam rota çizgisi — saydam (tüm rota planı) */}
+      {trucks.map((truck) =>
+        truck.full_latlons && truck.full_latlons.length > 1 ? (
+          <Polyline
+            key={`full-route-${truck.truck_id}`}
+            positions={truck.full_latlons}
+            pathOptions={{ color: accentColor, weight: 1.5, opacity: 0.25, dashArray: '4 6' }}
+          />
+        ) : null
+      )}
+
+      {/* Kalan rota çizgisi — parlak (kamyonun önündeki yol) */}
+      {trucks.map((truck) =>
+        truck.route_ahead && truck.route_ahead.length > 1 ? (
+          <Polyline
+            key={`ahead-${truck.truck_id}`}
+            positions={truck.route_ahead}
+            pathOptions={{ color: accentColor, weight: 2.5, opacity: 0.75, dashArray: '8 4' }}
+          />
+        ) : null
+      )}
+
+      {/* Bin marker'ları */}
       <MarkerClusterGroup chunkedLoading>
         {bins.map((bin) => (
           <Marker
@@ -114,18 +152,50 @@ function SimMap({ bins, trucks, showTraffic, trafficToken }) {
             icon={makeBinIcon(bin.status, bin.fill_pct)}
           >
             <Popup>
-              <div style={{ fontSize: 12, minWidth: 160 }}>
+              <div style={{ fontSize: 12, minWidth: 180 }}>
                 <strong>{bin.bin_id}</strong>
                 <div>Dolum: <strong style={{ color: fillColor(bin.status, bin.fill_pct) }}>{Math.round(bin.fill_pct)}%</strong></div>
                 <div>Durum: {bin.status}</div>
                 <div>Etiket: Hız <strong>{bin.fill_label}</strong> · Mesafe <strong>{bin.distance_label}</strong></div>
                 <div>Bölge: {bin.region}</div>
+                <div style={{ marginTop: 4, borderTop: '1px solid #e2e8f0', paddingTop: 4 }}>
+                  <div>
+                    <span style={{ color: '#64748b' }}>Tahmini Dolum: </span>
+                    <strong style={{ color: bin.fill_pct >= 100 ? '#ef4444' : '#f97316' }}>
+                      {bin.fill_pct >= 100
+                        ? 'DOLU'
+                        : bin.estimated_full_iso
+                          ? fmtDt(bin.estimated_full_iso)
+                          : '—'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>Son Boşaltım: </span>
+                    <strong style={{ color: '#22c55e' }}>
+                      {bin.last_emptied_iso ? fmtDt(bin.last_emptied_iso) : 'Henüz boşaltılmadı'}
+                    </strong>
+                  </div>
+                </div>
               </div>
             </Popup>
           </Marker>
         ))}
       </MarkerClusterGroup>
 
+      {/* Depot marker — parlak mor */}
+      {depotLat && depotLon && (
+        <Marker position={[depotLat, depotLon]} icon={DEPOT_ICON} zIndexOffset={2000}>
+          <Popup>
+            <div style={{ fontSize: 12 }}>
+              <strong>Depo Merkezi</strong>
+              <div style={{ color: '#9333ea' }}>Kamyonlar buradan başlar ve döner</div>
+              <div style={{ fontSize: 11, color: '#64748b' }}>{depotLat.toFixed(4)}, {depotLon.toFixed(4)}</div>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
+      {/* Kamyon marker'ları */}
       {trucks.map((truck, i) => (
         <Marker
           key={`truck-${truck.truck_id}-${i}`}
@@ -137,9 +207,9 @@ function SimMap({ bins, trucks, showTraffic, trafficToken }) {
             <div style={{ fontSize: 12 }}>
               <strong>Kamyon #{truck.truck_id}</strong>
               <div>
-                {truck.status === 'servicing'  ? `Servis: ${truck.at_bin}`  :
-                 truck.status === 'returning'   ? 'Depoya dönüyor'           :
-                 truck.status === 'en_route'    ? `→ ${truck.to_bin}`        : truck.status}
+                {truck.status === 'servicing' ? `Servis: ${truck.at_bin}`  :
+                 truck.status === 'returning'  ? 'Depoya dönüyor'           :
+                 truck.status === 'en_route'   ? `→ ${truck.to_bin}`        : truck.status}
               </div>
               <div>İlerleme: {Math.round((truck.progress || 0) * 100)}%</div>
               <div>Duraklar: {truck.current_stop_idx + 1}/{truck.stops_total}</div>
@@ -164,17 +234,22 @@ function KPIChip({ label, value, unit, accent }) {
   )
 }
 
-function EffChip({ rate, accent }) {
-  const display = rate !== null ? `${rate}%` : '—'
+function EffChip({ rate, loadPerKm, overflowHours, accent }) {
+  const display  = rate !== null ? `${rate}%` : '—'
+  const fmtK     = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+  const sub1     = loadPerKm    !== null ? `${loadPerKm} yk/km` : ''
+  const sub2     = overflowHours !== null ? `${fmtK(overflowHours)} bin·s taşma` : ''
   return (
     <div className={`opc-chip opc-chip-${accent} opc-chip-eff`}>
       <div className="opc-eff-top">
         <span className={`opc-chip-val opc-val-${accent}`}>{display}</span>
+        {sub1 && <span className="opc-chip-sub">{sub1}</span>}
       </div>
+      {sub2 && <div className="opc-chip-sub opc-chip-sub-overflow">{sub2}</div>}
       <div className="opc-eff-track">
         <div className={`opc-eff-fill opc-eff-${accent}`} style={{ width: `${rate ?? 0}%` }} />
       </div>
-      <div className="opc-chip-label">Verimlilik</div>
+      <div className="opc-chip-label">Sistem Skoru</div>
     </div>
   )
 }
@@ -199,14 +274,18 @@ function TruckDots({ count, accent }) {
 
 // ── ColPanel ──────────────────────────────────────────────────────────────────
 
-function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken }) {
-  const effRate = kpis
-    ? accent === 'algo'
-      ? Math.min(100, Math.round(90 + (kpis.dispatch_count % 5)))
-      : Math.min(100, Math.max(40, Math.round(
-          85 - (kpis.overflow_events / Math.max(1, kpis.dispatch_count)) * 10
-        )))
+function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken, depotLat, depotLon }) {
+  // ── Verimlilik: load/km (yük verimliliği) — taşma AYRI gösterilir ────────
+  // Verimlilik ve taşma farklı boyutlar; birini diğerine kurban etmek
+  // akademik olarak yanlış. Taşma sub-label'da kırmızı görünür, skoru etkilemez.
+  // Referans: 80 yk/km → %100 (ortalama %80 dolu 1 bin/km)
+  const loadPerKm     = kpis && kpis.distance_km > 0
+    ? Math.round((kpis.load_collected / kpis.distance_km) * 10) / 10
     : null
+  const overflowHours = kpis ? kpis.overflow_events : null   // bin-saat (informational)
+  const effRate       = loadPerKm !== null
+    ? Math.min(100, Math.round(loadPerKm / 0.8))
+    : kpis ? 0 : null
 
   const validBins = bins.filter((b) => b.lat && b.lon)
 
@@ -220,7 +299,7 @@ function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken
         <KPIChip label="CO₂ Emisyonu"    value={kpis ? kpis.co2_kg             : '—'} unit={kpis ? ' kg' : ''} accent={accent} />
         <KPIChip label="Yakıt Sarfiyatı" value={kpis ? kpis.fuel_l             : '—'} unit={kpis ? ' L'  : ''} accent={accent} />
         <KPIChip label="Op. Maliyet"     value={kpis ? fmtCost(kpis.cost_tl)   : '—'} unit=""                   accent={accent} />
-        <EffChip rate={effRate} accent={accent} />
+        <EffChip rate={effRate} loadPerKm={loadPerKm} overflowHours={overflowHours} accent={accent} />
       </div>
 
       <TruckDots count={trucks.length} accent={accent} />
@@ -231,6 +310,9 @@ function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken
           trucks={trucks}
           showTraffic={showTraffic}
           trafficToken={trafficToken}
+          depotLat={depotLat}
+          depotLon={depotLon}
+          accent={accent}
         />
         {kpis && (
           <div className={`opc-map-pill opc-pill-${accent}`}>
@@ -238,7 +320,7 @@ function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken
             <span className="opc-pill-dot">·</span>
             <span>{kpis.distance_km} km</span>
             <span className="opc-pill-dot">·</span>
-            <span style={{ color: '#ef4444' }}>{kpis.overflow_events} Taşma</span>
+            <span style={{ color: '#ef4444' }}>{kpis.overflow_count ?? kpis.overflow_events} Taşma</span>
           </div>
         )}
       </div>
@@ -346,6 +428,9 @@ export default function SimulationPage() {
   const [speedIdx, setSpeedIdx]     = useState(DEFAULT_SPEED_IDX)
   const [virtualClock, setVirtualClock] = useState(null)
 
+  const [depotLat, setDepotLat] = useState(null)
+  const [depotLon, setDepotLon] = useState(null)
+
   const [algoBins, setAlgoBins]       = useState([])
   const [fixedBins, setFixedBins]     = useState([])
   const [algoTrucks, setAlgoTrucks]   = useState([])
@@ -376,6 +461,8 @@ export default function SimulationPage() {
       setFixedTrucks(data.fixed_trucks || [])
       setVirtualClock(data.virtual_clock)
       setIsRunning(data.is_running)
+      if (data.depot_lat) setDepotLat(data.depot_lat)
+      if (data.depot_lon) setDepotLon(data.depot_lon)
     } catch { /* bağlantı hatası sessizce geçilir */ }
   }, [])
 
@@ -493,6 +580,8 @@ export default function SimulationPage() {
           bins={algoBins}
           showTraffic={showTraffic}
           trafficToken={trafficToken}
+          depotLat={depotLat}
+          depotLon={depotLon}
         />
         <div className="opc-divider" />
         <ColPanel
@@ -503,6 +592,8 @@ export default function SimulationPage() {
           bins={fixedBins}
           showTraffic={showTraffic}
           trafficToken={trafficToken}
+          depotLat={depotLat}
+          depotLon={depotLon}
         />
       </div>
 

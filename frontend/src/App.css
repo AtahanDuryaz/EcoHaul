@@ -747,7 +747,9 @@ body {
 /* Efficiency chip variant */
 .opc-chip-eff { justify-content: space-between; }
 
-.opc-eff-top { display: flex; align-items: baseline; gap: 4px; }
+.opc-eff-top { display: flex; align-items: baseline; gap: 6px; }
+.opc-chip-sub { font-size: 10px; color: #64748b; font-weight: 400; }
+.opc-chip-sub-overflow { margin-top: 1px; color: #ef4444; opacity: 0.85; }
 
 .opc-eff-track {
   height: 5px;

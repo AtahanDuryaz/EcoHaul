@@ -91,7 +91,7 @@ _W_PROXIMITY = 0.05   # yakın bin → rota verimli (seçimde küçük etki)
 _W_TRAFFIC   = 0.12   # az trafikte gönder
 _W_DENSITY   = 0.08   # yakın çevredeki yüksek-doluluklu bin yoğunluğu
 
-_ETF_HORIZON        = 8.0    # 8 sim saatin altındaki ETF skora katkı yapar
+_ETF_HORIZON        = 24.0   # 24 sim saat içindeki ETF skora katkı yapar (A/B/C farkı belirgin)
 _DENSITY_RADIUS_KM  = 1.0    # yoğunluk hesabı için yarıçap (km)
 _DENSITY_MAX_BINS   = 10     # normalizasyon: 10+ bin → yoğunluk skoru = 1.0
 _DENSITY_MIN_FILL   = 65.0   # yoğunluk sayımına dahil edilecek minimum doluluk
@@ -136,6 +136,9 @@ def score_bin(
       density_norm : yakın çevredeki yüksek-dolu bin yoğunluğu [0,1]
     """
     fill_urgency = (fill_pct / 100.0) ** 2
+    if fill_pct >= 85.0:
+        boost = (fill_pct - 85.0) / 15.0          # 0→1 as fill_pct goes 85→100
+        fill_urgency += boost * (1.0 - fill_urgency)  # smooth ceiling push
     etf          = _etf_hours(fill_pct, fill_rate)
     etf_urgency  = max(0.0, 1.0 - etf / _ETF_HORIZON)   # 8h+ → 0, 0h → 1
     proximity    = 1.0 - (distance_label - 1) / 2.0
@@ -152,12 +155,12 @@ def score_bin(
 # KATMAN 3 — BinSelector
 # ══════════════════════════════════════════════════════════════════════════════
 
-_MIN_FILL_NORMAL = 65.0   # normal saatlerde %65+ dolu bin adaya girer
-_MIN_FILL_RUSH   = 85.0   # rush saatlerde sadece %85+
-_RUSH_THR        = 0.70
+_RUSH_THR              = 0.70
+_MIN_FILL_NORMAL       = 70.0  # normal saatlerde %70+ dolu bin adaya girer
+_MIN_FILL_RUSH         = 85.0  # rush saatlerde sadece %85+
 
-ETF_LEAD_TIME    = 3.0    # taşmaya ≤3 sim saat kalan bin → fill_pct eşiğini atla
-_EMERGENCY_FILL  = 88.0   # %88+ → MIN_DISPATCH şartını bypass et
+ETF_LEAD_TIME          = 3.0   # taşmaya ≤3 sim saat kalan bin → her zaman dahil et
+_EMERGENCY_FILL        = 88.0  # %88+ → MIN_DISPATCH şartını bypass et
 
 MIN_DISPATCH = 8           # en az 8 bin seçilemezse (ve acil yoksa) dispatch yapma
 
@@ -180,10 +183,10 @@ def select_bins(
 ) -> list[_ScoredStop]:
     """
     Bin seçim mantığı:
-      1. Acil (%95+)           → her zaman dahil et
-      2. ETF ≤ ETF_LEAD_TIME   → fill_pct eşiğine bakmaksızın dahil et (erken yakalama)
-      3. fill_pct ≥ min_fill   → normal eşikle dahil et
-      4. Skor sırasına koy, en iyi max_stops bin'i döndür
+      1. fill_pct ≥ _EMERGENCY_FILL → her zaman dahil et
+      2. ETF ≤ ETF_LEAD_TIME        → taşmaya 3 saat kaldı, eşiği atla
+      3. fill_pct ≥ min_fill        → normal/rush eşiğini geç
+      4. Skor sırasına koy (ETF_HORIZON=24h ile A/B/C farkı belirgin), en iyi max_stops döndür
     """
     min_fill = _MIN_FILL_RUSH if traffic > _RUSH_THR else _MIN_FILL_NORMAL
 
@@ -193,8 +196,8 @@ def select_bins(
         if b.is_anomaly:
             continue
         etf = _etf_hours(b.fill_pct, b.fill_rate)
-        is_emergency      = b.fill_pct >= _EMERGENCY_FILL
-        is_etf_urgent     = etf <= ETF_LEAD_TIME
+        is_emergency       = b.fill_pct >= _EMERGENCY_FILL
+        is_etf_urgent      = etf <= ETF_LEAD_TIME
         is_above_threshold = b.fill_pct >= min_fill
         if not (is_emergency or is_etf_urgent or is_above_threshold):
             continue
@@ -358,6 +361,7 @@ def dpet_dispatch(
     depot_lon: float,
     max_fleet: int,
     max_stops: int,
+    min_dispatch: int = MIN_DISPATCH,
 ) -> list[list[Stop]]:
     """
     Ana dispatch fonksiyonu.
@@ -384,14 +388,14 @@ def dpet_dispatch(
     has_any_urgent = any(ss.fill_pct >= _EMERGENCY_FILL or ss.etf_h <= ETF_LEAD_TIME
                          for ss in selected)
 
-    if len(selected) < MIN_DISPATCH and not has_any_urgent:
+    if len(selected) < min_dispatch and not has_any_urgent:
         return []
 
     routes: list[list[Stop]] = []
     for i in range(0, len(selected), max_stops):
         chunk = selected[i:i + max_stops]
 
-        if len(chunk) < MIN_DISPATCH and not _chunk_is_urgent(chunk):
+        if len(chunk) < min_dispatch and not _chunk_is_urgent(chunk):
             break
 
         route = build_route(chunk, depot_lat, depot_lon)
