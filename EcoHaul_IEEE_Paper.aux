@@ -1,0 +1,77 @@
+\relax 
+\citation{gutierrez2015}
+\citation{arebey2012}
+\citation{pardini2018}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{1}{}\protected@file@percent }
+\citation{dantzig1959}
+\citation{christofides1976}
+\citation{akhtar2017}
+\citation{anagnostopoulos2015}
+\citation{malapur2017}
+\citation{grieves2017}
+\citation{zanella2014}
+\citation{dcc2023}
+\newlabel{eq:mass_aware}{{1}{2}{Related Work}{equation.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}System Architecture}{2}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces EcoHaul five-layer system architecture; each layer interacts only with its immediate neighbours.}}{2}{}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:layers}{{1}{2}{System Architecture}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces EcoHaul component interaction: telemetry from the IoT layer reaches the REST API, triggers the predictor and DPET, and is persisted in PostgreSQL/PostGIS.}}{2}{}\protected@file@percent }
+\newlabel{fig:arch}{{2}{2}{System Architecture}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Dataset}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Layered Components}{2}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Dublin City Council public bin dataset.}}{3}{}\protected@file@percent }
+\newlabel{tab:dataset}{{I}{3}{Dataset}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}The DPET Algorithm}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Layer 1: Traffic Model}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Layer 2: Bin Scoring}{3}{}\protected@file@percent }
+\newlabel{eq:bin_score}{{2}{3}{Layer 2: Bin Scoring}{equation.2}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces DPET dispatch cycle (executed every simulation hour)}}{3}{}\protected@file@percent }
+\newlabel{alg:dpet}{{1}{3}{The DPET Algorithm}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Layer 3: Bin Selection}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Layer 4: Route Building}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Layer 5: Route-Efficiency Filter}{4}{}\protected@file@percent }
+\newlabel{eq:efficiency}{{3}{4}{Layer 5: Route-Efficiency Filter}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Layer 6: Dispatcher}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Implementation}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Fill Predictor}{4}{}\protected@file@percent }
+\newlabel{eq:etf}{{4}{4}{Fill Predictor}{equation.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Urban Environment Model}{4}{}\protected@file@percent }
+\newlabel{eq:eff_rate}{{5}{4}{Urban Environment Model}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Anomaly Detection}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}IoT Layer and Backend}{4}{}\protected@file@percent }
+\newlabel{eq:fill_from_dist}{{6}{4}{IoT Layer and Backend}{equation.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Experimental Evaluation}{4}{}\protected@file@percent }
+\newlabel{sec:eval}{{VI}{4}{Experimental Evaluation}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Setup}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces EcoHaul real-time operations dashboard during a parallel run. Left: the DPET world serves the city at 81\% efficiency with a small active fleet. Right: the fixed-route baseline runs near its fleet ceiling at 67\%. Each side shows colour-coded bin markers, animated trucks, and a live KPI comparison panel.}}{5}{}\protected@file@percent }
+\newlabel{fig:dashboard}{{3}{5}{IoT Layer and Backend}{figure.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Simulation configuration.}}{5}{}\protected@file@percent }
+\newlabel{tab:config}{{II}{5}{Setup}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}KPI Comparison}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Average KPIs over one-year simulations (best value in bold).}}{5}{}\protected@file@percent }
+\newlabel{tab:kpi}{{III}{5}{KPI Comparison}{table.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces DPET's percentage advantage over the Greedy and 2-opt baselines across all KPIs (positive = DPET better).}}{5}{}\protected@file@percent }
+\newlabel{fig:savings}{{4}{5}{KPI Comparison}{figure.4}{}}
+\bibcite{gutierrez2015}{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces System efficiency as a function of the active fleet size. DPET (small fleets) dominates the baselines even at their largest fleets.}}{6}{}\protected@file@percent }
+\newlabel{fig:fleet}{{5}{6}{Efficiency vs.\ Fleet Size}{figure.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Anomaly detection accuracy by category.}}{6}{}\protected@file@percent }
+\newlabel{tab:anomaly}{{IV}{6}{Anomaly Detection}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Efficiency vs.\ Fleet Size}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Anomaly Detection}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Conclusion and Future Work}{6}{}\protected@file@percent }
+\bibcite{arebey2012}{2}
+\bibcite{pardini2018}{3}
+\bibcite{dantzig1959}{4}
+\bibcite{christofides1976}{5}
+\bibcite{akhtar2017}{6}
+\bibcite{anagnostopoulos2015}{7}
+\bibcite{malapur2017}{8}
+\bibcite{grieves2017}{9}
+\bibcite{zanella2014}{10}
+\bibcite{eurostat2022}{11}
+\bibcite{dcc2023}{12}
+\@writefile{toc}{\contentsline {section}{References}{7}{}\protected@file@percent }
+\gdef \@abspage@last{7}

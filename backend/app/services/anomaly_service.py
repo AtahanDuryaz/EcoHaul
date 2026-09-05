@@ -55,7 +55,7 @@ def log_anomaly_event(
     )
 
 
-def check_overflow_risk(
+def check_overflow_risk( #overflow kontrol
     db: Session,
     bin_id: str,
     new_level: FillLevelEnum,
@@ -84,7 +84,7 @@ def check_overflow_risk(
     log_anomaly_event(db, bin_id, AnomalyType.OVERFLOW_RISK, details or None)
 
 
-def check_sensor_error_flag(
+def check_sensor_error_flag( #sensor error kontrol
     db: Session,
     bin_id: str,
     new_level: FillLevelEnum,
@@ -107,7 +107,7 @@ def check_sensor_error_flag(
     log_anomaly_event(db, bin_id, AnomalyType.SENSOR_NOT_FOUND_ERROR, details or None)
 
 
-def check_sensor_fixed_value_error(
+def check_sensor_fixed_value_error( # sensor düzeltilmesinin kontrolü 
     db: Session,
     bin_id: str,
     window_size: int = 3,
@@ -152,7 +152,7 @@ def check_sensor_fixed_value_error(
         log_anomaly_event(db, bin_id, AnomalyType.SENSOR_FIXED_VALUE_ERROR, details)
 
 
-def check_fill_anomaly(db: Session, bin_id: str, time_window_minutes: int = 15) -> None:
+def check_fill_anomaly(db: Session, bin_id: str, time_window_minutes: int = 15) -> None: #fill anomaly
     """Detect suspicious fill/empty patterns based on recent enums.
 
     Simple rule: if the last three enums for a bin form the pattern

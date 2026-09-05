@@ -17,7 +17,7 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 FALLBACK_CSV = ROOT_DIR / "backend" / "data" / "bins_wgs84.csv"
 
 
-def _load_bins_from_csv() -> list[dict]:
+def _load_bins_from_csv() -> list[dict]: #csv den schemaya uygun olarak bin locationları listeye aktarılıyor
     if not FALLBACK_CSV.exists():
         return []
 
@@ -39,7 +39,7 @@ def _load_bins_from_csv() -> list[dict]:
     return bins
 
 
-def fetch_bins(db: Session) -> list[dict]:
+def fetch_bins(db: Session) -> list[dict]: #bu binlerin bilgilerinin görülmesi için query oluşturulması
     query = text(
         """
         SELECT
@@ -104,14 +104,14 @@ def fetch_summary(db: Session) -> dict:
         }
 
 
-def log_state_change(db: Session, bin_id: str, payload: StateChangeIn) -> None:
+def log_state_change(db: Session, bin_id: str, payload: StateChangeIn) -> None: #sensör versini işleyen ana fonksiyon
     """Insert telemetry row and update bin's IoT-related fields.
 
     - Inserts a telemetry event with enum_state and optional raw distance.
     - Updates bins.fill_level, is_active, last_seen_at and last enum change info.
     """
 
-    telemetry_query = text(
+    telemetry_query = text( #telemetry 
         """
         INSERT INTO telemetry (bin_id, enum_state, raw_distance_cm)
         VALUES (:bin_id, :enum_state, :raw_distance_cm)
@@ -141,7 +141,7 @@ def log_state_change(db: Session, bin_id: str, payload: StateChangeIn) -> None:
     ).scalar_one_or_none()
 
     # Update current bin status and last enum transition summary
-    update_query = text(
+    update_query = text( #bins update oluyor
         """
         UPDATE bins
         SET
@@ -179,7 +179,7 @@ def log_state_change(db: Session, bin_id: str, payload: StateChangeIn) -> None:
     try:
         new_level_enum = payload.enum_state
         # CRITICAL_FULL -> OVERFLOW_RISK
-        check_overflow_risk(
+        check_overflow_risk( #kritik durumu geçti mi kontrolü
             db,
             bin_id,
             new_level_enum,
@@ -197,7 +197,19 @@ def log_state_change(db: Session, bin_id: str, payload: StateChangeIn) -> None:
         pass
 
     # Persist telemetry insert, bin update and any anomaly events
-    db.commit()
+    db.commit() #bunla commit
+
+    # Live simulation engine'e enjekte et — DB kalıcılığından bağımsız, hatası
+    # state-change akışını bozmamalı.
+    try:
+        from ..simulation_engine import engine
+        engine.inject_sensor_reading(
+            bin_id=bin_id,
+            enum_state=payload.enum_state.value,
+            median_distance_cm=payload.median_distance_cm,
+        )
+    except Exception:
+        pass
 
 
 def log_heartbeat(db: Session, bin_id: str, payload: HeartbeatIn) -> None:

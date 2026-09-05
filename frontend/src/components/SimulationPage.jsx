@@ -14,6 +14,7 @@ import {
   getLiveState,
   getSimAnomalies,
   resetSim,
+  setFixedAlgorithm,
   setSimSpeed,
   startSim,
   stopSim,
@@ -32,6 +33,12 @@ const SPEED_OPTIONS = [
   { label: '86400x', multiplier: 86400 },
 ]
 const DEFAULT_SPEED_IDX = 2   // 3600x
+
+const FIXED_ALGO_OPTIONS = [
+  { value: 'lo_dcs', label: 'LO-DCS — Cuckoo Search (Goswami vd. 2026)' },
+  { value: 'aco',    label: 'K-Means + ACO (Kim vd. 2023)' },
+  { value: 'hho',    label: 'İyileştirilmiş HHO (Huang vd. 2026)' },
+]
 
 const POLL_STATE_MS    = 1_000
 const POLL_KPIS_MS     = 2_000
@@ -274,7 +281,32 @@ function TruckDots({ count, accent }) {
 
 // ── ColPanel ──────────────────────────────────────────────────────────────────
 
-function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken, depotLat, depotLon }) {
+function FixedAlgoSelect({ value, disabled, switching, onChange }) {
+  return (
+    <div className="opc-algo-select-row">
+      <label htmlFor="fixed-algo-select" className="opc-algo-select-label">
+        Rota Algoritması
+      </label>
+      <select
+        id="fixed-algo-select"
+        className="opc-algo-select"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {FIXED_ALGO_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      {switching && <span className="opc-algo-select-loading">Hesaplanıyor…</span>}
+    </div>
+  )
+}
+
+function ColPanel({
+  title, accent, kpis, trucks, bins, showTraffic, trafficToken, depotLat, depotLon,
+  isRunning, fixedAlgorithm, algoSwitching, onFixedAlgorithmChange,
+}) {
   // ── Verimlilik: load/km (yük verimliliği) — taşma AYRI gösterilir ────────
   // Verimlilik ve taşma farklı boyutlar; birini diğerine kurban etmek
   // akademik olarak yanlış. Taşma sub-label'da kırmızı görünür, skoru etkilemez.
@@ -303,6 +335,15 @@ function ColPanel({ title, accent, kpis, trucks, bins, showTraffic, trafficToken
       </div>
 
       <TruckDots count={trucks.length} accent={accent} />
+
+      {accent === 'fixed' && (
+        <FixedAlgoSelect
+          value={fixedAlgorithm || 'lo_dcs'}
+          disabled={isRunning || algoSwitching}
+          switching={algoSwitching}
+          onChange={onFixedAlgorithmChange}
+        />
+      )}
 
       <div className="opc-map-area">
         <SimMap
@@ -445,6 +486,9 @@ export default function SimulationPage() {
   const [showTraffic, setShowTraffic]   = useState(false)
   const [trafficToken, setTrafficToken] = useState(0)
 
+  const [fixedAlgorithm, setFixedAlgorithmState] = useState('lo_dcs')
+  const [algoSwitching, setAlgoSwitching]         = useState(false)
+
   // Polling intervalları
   const stateTimer   = useRef(null)
   const kpiTimer     = useRef(null)
@@ -463,6 +507,7 @@ export default function SimulationPage() {
       setIsRunning(data.is_running)
       if (data.depot_lat) setDepotLat(data.depot_lat)
       if (data.depot_lon) setDepotLon(data.depot_lon)
+      if (data.fixed_algorithm) setFixedAlgorithmState(data.fixed_algorithm)
     } catch { /* bağlantı hatası sessizce geçilir */ }
   }, [])
 
@@ -533,6 +578,21 @@ export default function SimulationPage() {
     setTrafficToken((p) => p + 1)
   }
 
+  const handleFixedAlgorithmChange = async (algorithm) => {
+    if (isRunning || algorithm === fixedAlgorithm) return
+    setAlgoSwitching(true)
+    try {
+      await setFixedAlgorithm(algorithm)
+      setFixedAlgorithmState(algorithm)
+      await pollState()
+    } catch {
+      // Sunucu reddettiyse (örn. bu sırada simülasyon başladıysa) gerçek durumu geri çek
+      await pollState()
+    } finally {
+      setAlgoSwitching(false)
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────
 
   return (
@@ -594,6 +654,10 @@ export default function SimulationPage() {
           trafficToken={trafficToken}
           depotLat={depotLat}
           depotLon={depotLon}
+          isRunning={isRunning}
+          fixedAlgorithm={fixedAlgorithm}
+          algoSwitching={algoSwitching}
+          onFixedAlgorithmChange={handleFixedAlgorithmChange}
         />
       </div>
 

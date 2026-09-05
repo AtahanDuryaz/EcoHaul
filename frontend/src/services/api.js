@@ -24,6 +24,7 @@ export const startSim       = ()                   => api.post('/api/simulation/
 export const stopSim        = ()                   => api.post('/api/simulation/stop')
 export const resetSim       = ()                   => api.post('/api/simulation/reset')
 export const setSimSpeed    = (multiplier)         => api.patch('/api/simulation/speed', { multiplier })
+export const setFixedAlgorithm = (algorithm)       => api.patch('/api/simulation/fixed-algorithm', { algorithm })
 export const getLiveState   = ()                   => api.get('/api/simulation/live-state')
 export const getLiveKPIs    = ()                   => api.get('/api/simulation/live-kpis')
 export const getSimAnomalies = ()                  => api.get('/api/simulation/anomalies')

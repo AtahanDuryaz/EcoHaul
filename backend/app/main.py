@@ -17,9 +17,9 @@ from .simulation_engine import engine
 async def lifespan(_app: FastAPI):
     # Uygulama başlarken bin'leri engine'e yükle
     db = SessionLocal()
-    try:
+    try: #tüm binleri yüklüyor
         rows = db.execute(text("""
-            SELECT bin_id, latitude AS lat, longitude AS lon,
+            SELECT bin_id, latitude AS lat, longitude AS lon, 
                    region, fill_label, distance_label
             FROM bins
             ORDER BY bin_id
@@ -51,22 +51,22 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/api/bins", response_model=list[BinOut])
+@app.get("/api/bins", response_model=list[BinOut]) #bin konumlarını
 def get_bins(db: Session = Depends(get_db)) -> list[dict]:
-    return fetch_bins(db)
+    return fetch_bins(db) #
 
 
 @app.get("/api/bins/summary", response_model=BinsSummaryOut)
-def get_bins_summary(db: Session = Depends(get_db)) -> dict:
+def get_bins_summary(db: Session = Depends(get_db)) -> dict: #binslerin datalarını çekiyor
     return fetch_summary(db)
 
 
-@app.get("/api/anomalies", response_model=list[AnomalyEventOut])
+@app.get("/api/anomalies", response_model=list[AnomalyEventOut]) #anomaly listesini çekiyor
 def get_anomalies(limit: int = 50, db: Session = Depends(get_db)) -> list[AnomalyEventOut]:
     return fetch_recent_anomalies(db, limit=limit)
 
 
-@app.post("/api/devices/{bin_id}/state-change")
+@app.post("/api/devices/{bin_id}/state-change") #state change oluşunca tetikleniyor
 def post_state_change(
     bin_id: str,
     payload: StateChangeIn,

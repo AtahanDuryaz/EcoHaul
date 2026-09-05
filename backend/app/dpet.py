@@ -25,7 +25,7 @@ from typing import Protocol
 # ── Paylaşılan stop tipi ───────────────────────────────────────────────────────
 
 @dataclass
-class Stop:
+class Stop: # durulan noktanın bin_id ve kordinatları 
     bin_id: str
     lat: float
     lon: float
@@ -54,7 +54,7 @@ FUEL_WEIGHT_FACTOR  = 0.8    # tam dolu kamyon boş kamyona göre %80 daha fazla
 
 # ── Coğrafi yardımcı ──────────────────────────────────────────────────────────
 
-def _km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def _km(lat1: float, lon1: float, lat2: float, lon2: float) -> float: # iki nokta arasındaki kuş uçuşu mesafeyi ölçüyor
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -68,7 +68,7 @@ def _km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 # KATMAN 1 — TrafficModel
 # ══════════════════════════════════════════════════════════════════════════════
 
-_RUSH_HOURS = frozenset({7, 8, 9, 17, 18, 19})
+_RUSH_HOURS = frozenset({7, 8, 9, 17, 18, 19}) #sabit rush hourlar
 _PEAK_HOURS = frozenset({6, 10, 16, 20})
 
 
@@ -101,16 +101,16 @@ def _etf_hours(fill_pct: float, fill_rate: float) -> float:
     """Mevcut doluluk ve hıza göre taşmaya kalan sim saat. fill_rate=0 → ∞"""
     if fill_rate <= 0:
         return float("inf")
-    return max(0.0, (100.0 - fill_pct) / fill_rate)
+    return max(0.0, (100.0 - fill_pct) / fill_rate) # mevcut doluluğa göre kaç saatte dolacağını tahmin etmeye çalışıyor
 
 
-def _count_nearby_bins(
+def _count_nearby_bins( # yakındaki tüm binler seçiliyor
     lat: float, lon: float, bins, radius_km: float, min_fill: float
 ) -> int:
     """Belirtilen yarıçap içinde min_fill üzerindeki bin sayısı (kendisi hariç)."""
     count = 0
     for b in bins:
-        if b.is_anomaly or b.fill_pct < min_fill:
+        if b.is_anomaly or b.fill_pct < min_fill: #anomaly boşalma anomalisi ise continue oluyor dolma ise zaten başka kontrol var
             continue
         if _km(lat, lon, b.lat, b.lon) < 1e-6:
             continue   # aynı bin
@@ -135,10 +135,10 @@ def score_bin(
       traffic_ok   : trafik az = iyi zaman
       density_norm : yakın çevredeki yüksek-dolu bin yoğunluğu [0,1]
     """
-    fill_urgency = (fill_pct / 100.0) ** 2
+    fill_urgency = (fill_pct / 100.0) ** 2 #yüksek doluluk daha belirgin öne çıksın diye 
     if fill_pct >= 85.0:
-        boost = (fill_pct - 85.0) / 15.0          # 0→1 as fill_pct goes 85→100
-        fill_urgency += boost * (1.0 - fill_urgency)  # smooth ceiling push
+        boost = (fill_pct - 85.0) / 15.0          # 0→1 as fill_pct goes 85→100 #boost skoru ekleniyor
+        fill_urgency += boost * (1.0 - fill_urgency)  # smooth ceiling push 
     etf          = _etf_hours(fill_pct, fill_rate)
     etf_urgency  = max(0.0, 1.0 - etf / _ETF_HORIZON)   # 8h+ → 0, 0h → 1
     proximity    = 1.0 - (distance_label - 1) / 2.0
@@ -148,7 +148,7 @@ def score_bin(
             + _W_ETF * etf_urgency
             + _W_PROXIMITY * proximity
             + _W_TRAFFIC * traffic_ok
-            + _W_DENSITY * density_norm)
+            + _W_DENSITY * density_norm) # en sonda öncelik yüzdesi çıkarılmış oluyor max 1
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -195,32 +195,33 @@ def select_bins(
     for b in bins:
         if b.is_anomaly:
             continue
-        etf = _etf_hours(b.fill_pct, b.fill_rate)
+        etf = _etf_hours(b.fill_pct, b.fill_rate) 
         is_emergency       = b.fill_pct >= _EMERGENCY_FILL
         is_etf_urgent      = etf <= ETF_LEAD_TIME
         is_above_threshold = b.fill_pct >= min_fill
-        if not (is_emergency or is_etf_urgent or is_above_threshold):
+        if not (is_emergency or is_etf_urgent or is_above_threshold): #eğer isteklerimize uymuyorsa append etmiyoruz
             continue
-        eligible.append((b, etf))
+        eligible.append((b, etf)) # eğer %88 üstü 3 saat içinde dolma ihtimali var ya da threshold altı ise append edilmiyor
 
     # İkinci geçiş: yoğunluk dahil skor hesapla (tüm bins listesi kullanılır)
-    result: list[_ScoredStop] = []
+    result: list[_ScoredStop] = [] #adaylar içerisinde puanlama yapılıyor
     for b, etf in eligible:
-        nearby       = _count_nearby_bins(b.lat, b.lon, bins, _DENSITY_RADIUS_KM, _DENSITY_MIN_FILL)
+        nearby       = _count_nearby_bins(b.lat, b.lon, bins, _DENSITY_RADIUS_KM, _DENSITY_MIN_FILL) #etrafındaki binlerin sayısına bakıyor
         density_norm = min(1.0, nearby / _DENSITY_MAX_BINS)
         s = score_bin(b.fill_pct, b.fill_rate, b.distance_label, traffic, density_norm)
-        d = _km(depot_lat, depot_lon, b.lat, b.lon)
-        result.append(_ScoredStop(Stop(b.bin_id, b.lat, b.lon), s, d, b.fill_pct, etf))
+        d = _km(depot_lat, depot_lon, b.lat, b.lon) #uzaklığa bakıyor
+        result.append(_ScoredStop(Stop(b.bin_id, b.lat, b.lon), s, d, b.fill_pct, etf)) # scored stop listesinde bin skorlarını tutuyor
 
     result.sort(key=lambda x: x.score, reverse=True)
-    return result[:max_stops]
+    return result[:max_stops] #uğranacak max bini o listedeki sortlamaya göre döndürüyor rotaya ekliyor
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # KATMAN 4 — RouteBuilder  (NN + tam 2-opt)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _nn_route(scored: list[_ScoredStop], depot_lat: float, depot_lon: float) -> list[_ScoredStop]:
+#katman 4.1 nearest neighbour rota oluşturuyor
+def _nn_route(scored: list[_ScoredStop], depot_lat: float, depot_lon: float) -> list[_ScoredStop]: 
     """
     Nearest-Neighbor sıralama: depot'tan başla, her adımda en yakın bin'e git.
     Kapasite kırpmasından önce uygulanır; sıralamayla hangi binlerin önce
@@ -238,7 +239,7 @@ def _nn_route(scored: list[_ScoredStop], depot_lat: float, depot_lon: float) -> 
 
     return route
 
-
+#katman 4.2 capacity constraintini aşan binler başka trucka atanıyor
 def _trim_by_capacity(nn_ordered: list[_ScoredStop]) -> list[_ScoredStop]:
     """
     NN sıralamasına göre kamyon kapasitesi dolana kadar bin ekle.
@@ -253,6 +254,28 @@ def _trim_by_capacity(nn_ordered: list[_ScoredStop]) -> list[_ScoredStop]:
         result.append(ss)
         used += load
     return result
+
+def _full_2opt(stops: list[Stop], dlat: float, dlon: float) -> list[Stop]:
+    """
+    Tam 2-opt: ağırlık-duyarlı yakıt maliyetini minimize eder.
+
+    Standart km minimizasyonu yerine _fuel_aware_dist kullanılır.
+    Bu sayede algo yolu kısaltırken aynı zamanda hafif yükle uzun,
+    ağır yükle kısa bacakları tercih eder.
+    """
+    n = len(stops) #kesişen yolları düzeltmek ve optimal rotaları denemek için en az 2 node atlayarak tüm olasılıklar denenir
+    best     = list(stops)
+    best_len = _fuel_aware_dist(best, dlat, dlon)
+    improved = True
+    while improved:
+        improved = False
+        for i in range(n - 1):
+            for j in range(i + 2, n):
+                cand = best[:i] + best[i:j + 1][::-1] + best[j + 1:]
+                clen = _fuel_aware_dist(cand, dlat, dlon)
+                if clen < best_len - 1e-6:
+                    best, best_len, improved = cand, clen, True
+    return best
 
 
 def build_route(
@@ -306,27 +329,7 @@ def _fuel_aware_dist(stops: list[Stop], dlat: float, dlon: float) -> float:
     return cost
 
 
-def _full_2opt(stops: list[Stop], dlat: float, dlon: float) -> list[Stop]:
-    """
-    Tam 2-opt: ağırlık-duyarlı yakıt maliyetini minimize eder.
 
-    Standart km minimizasyonu yerine _fuel_aware_dist kullanılır.
-    Bu sayede algo yolu kısaltırken aynı zamanda hafif yükle uzun,
-    ağır yükle kısa bacakları tercih eder.
-    """
-    n = len(stops)
-    best     = list(stops)
-    best_len = _fuel_aware_dist(best, dlat, dlon)
-    improved = True
-    while improved:
-        improved = False
-        for i in range(n - 1):
-            for j in range(i + 2, n):
-                cand = best[:i] + best[i:j + 1][::-1] + best[j + 1:]
-                clen = _fuel_aware_dist(cand, dlat, dlon)
-                if clen < best_len - 1e-6:
-                    best, best_len, improved = cand, clen, True
-    return best
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -374,7 +377,7 @@ def dpet_dispatch(
       5. Verimsiz + acilsiz rota → atla
       6. Kalan rotaları döndür
     """
-    available_slots = max_fleet - active_truck_count
+    available_slots = max_fleet - active_truck_count #elde kaç kamyon var belirle
     if available_slots <= 0:
         return []
 
@@ -385,7 +388,7 @@ def dpet_dispatch(
         max_stops=max_stops * available_slots,
     )
 
-    has_any_urgent = any(ss.fill_pct >= _EMERGENCY_FILL or ss.etf_h <= ETF_LEAD_TIME
+    has_any_urgent = any(ss.fill_pct >= _EMERGENCY_FILL or ss.etf_h <= ETF_LEAD_TIME #bypass istisnası kontrol ediliyor.
                          for ss in selected)
 
     if len(selected) < min_dispatch and not has_any_urgent:
