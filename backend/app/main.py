@@ -19,7 +19,7 @@ async def lifespan(_app: FastAPI):
     db = SessionLocal()
     try: #tüm binleri yüklüyor
         rows = db.execute(text("""
-            SELECT bin_id, latitude AS lat, longitude AS lon,
+            SELECT bin_id, latitude AS lat, longitude AS lon, 
                    region, fill_label, distance_label
             FROM bins
             ORDER BY bin_id
