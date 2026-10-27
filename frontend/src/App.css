@@ -802,6 +802,45 @@ body {
 .opc-truck-loading { font-size: 12px; color: #1e3a5f; letter-spacing: 0.2em; }
 .opc-truck-empty  { font-size: 13px; color: #1e293b; }
 
+/* ── Fixed dünyası: rota algoritması seçici ── */
+.opc-algo-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #09111e;
+  border-bottom: 1px solid #0e1a2e;
+  flex-shrink: 0;
+}
+
+.opc-algo-select-label {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.opc-algo-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #e2e8f0;
+  background: #0e1a2e;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.opc-algo-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.opc-algo-select-loading {
+  font-size: 11px;
+  color: #f59e0b;
+  white-space: nowrap;
+}
+
 /* ── Map area ── */
 .opc-map-area {
   flex: 1;

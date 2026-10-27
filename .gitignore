@@ -8,3 +8,18 @@ frontend/dist/
 backend/data/*.csv
 backend/data/*.json
 !.gitkeep
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+**/config.local.h
+.claude/
+# Generated LaTeX files and private academic submissions
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+EcoHaul_*.pdf
+dosyalar/studentID_NameSurname.pdf

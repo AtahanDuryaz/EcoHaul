@@ -154,9 +154,9 @@ class FillPredictor:
         """
         cycles = self._cycles.get(bin_id, [])
         if len(cycles) < 2:
-            return fallback_rate
+            return fallback_rate #eğer 2 den az data varsa soğuk başlangıç etikete göre
         avg_s = sum(cycles) / len(cycles)
-        return 100.0 / (avg_s / 3600.0)
+        return 100.0 / (avg_s / 3600.0) #yoksa ortalama al devam
 
     def predicted_etf_h(
         self,
@@ -168,11 +168,11 @@ class FillPredictor:
         rate = self.predicted_fill_rate_h(bin_id, fallback_rate)
         if rate <= 0:
             return float("inf")
-        return max(0.0, (100.0 - fill_pct) / rate)
+        return max(0.0, (100.0 - fill_pct) / rate) #ortalama ve kalan yüzdeye göre bir hesaplama yap
 
     def has_learned(self, bin_id: str) -> bool:
         """Bu bin için en az 2 gözlem var mı?"""
-        return len(self._cycles.get(bin_id, [])) >= 2
+        return len(self._cycles.get(bin_id, [])) >= 2 #ikiden fazla data varsa has learned diye flagle
 
     # ── Zone sorgusu ───────────────────────────────────────────────────────
 
